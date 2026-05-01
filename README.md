@@ -2,8 +2,7 @@
 
 > Share a private GitHub repo with anyone, no collaborator invite, no paid seat, no cleanup.
 
-[![CI](https://github.com/soub4i/gh-relay/actions/workflows/ci.yml/badge.svg)](https://github.com/soub4i/gh-relay/actions/workflows/ci.yml)
-[![Release](https://github.com/soub4i/gh-relay/actions/workflows/release.yml/badge.svg)](https://github.com/soub4i/gh-relay/actions/workflows/release.yml)
+[![Release](https://github.com/soub4i/gh-relay/actions/workflows/release.yaml/badge.svg)](https://github.com/soub4i/gh-relay/actions/workflows/release.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/soub4i/gh-relay)](https://goreportcard.com/report/github.com/soub4i/gh-relay)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -16,15 +15,15 @@ Adding a contractor or auditor as a GitHub collaborator means IT tickets, legal 
 ```
 $ gh-relay share --token ghp_... --repo my-org/private-app --expire 1h
 
-✓  Token valid
-✓  Repository: my-org/private-app (private)
-✓  Found 12 branch(es)
-✓  Tunnel active
+   Token valid
+   Repository: my-org/private-app (private)
+   Found 12 branch(es)
+   Tunnel active
 
-  ✦ Share this URL with your guest:
+    Share this URL with your guest:
     https://shiny-apple-92.trycloudflare.com
 
-  ⏱ Session expires in: 1h
+    Session expires in: 1h
   Press Ctrl+C to end the session immediately.
 ```
 
