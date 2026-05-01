@@ -1,3 +1,5 @@
+// Package server implements the gh-relay local HTTP server.
+// It serves a file-browser SPA and proxies read-only GitHub API requests.
 package server
 
 import (
@@ -8,12 +10,14 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.ibm.com/soub4i/gh-relay/internal/session"
 )
 
 func New(cfg Config) *Server {
 	s := &Server{cfg: cfg, mux: http.NewServeMux()}
+	tok, _ := cfg.Sessions.Issue()
+	rendered := []byte(strings.Replace(spaHTML, "/*__RELAY_TOKEN__*/", `var __RELAY_TOKEN__ = "`+tok+`";`, 1))
+	s.renderedSPA = rendered
+	s.token = tok
 	s.registerRoutes()
 	s.srv = &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
@@ -49,68 +53,33 @@ func (s *Server) Start(ctx context.Context) error {
 }
 
 func (s *Server) registerRoutes() {
-	// Auth.
-	s.mux.HandleFunc("/auth/login", s.handleLogin)
-
-	// All /api/* routes require a valid session.
-	s.mux.HandleFunc("/api/info", s.auth(s.handleInfo))
-	s.mux.HandleFunc("/api/tree", s.auth(s.handleTree))
-	s.mux.HandleFunc("/api/blob", s.auth(s.handleBlob))
-	s.mux.HandleFunc("/api/commits", s.auth(s.handleCommits))
-
-	// Serve the SPA for everything else.
-	s.mux.HandleFunc("/", s.auth(s.handleSPA))
-}
-
-// TODO: add rate limiting to prevent abuse and DoS attacks.
-// TODO: add a /auth/logout endpoint to allow manual session revocation.
-// TODO: add one-time passwords or other mechanisms to increase security if needed.
-
-// auth is middleware that checks for a valid session cookie and redirects to /auth/login if not present.
-func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if cookie, err := r.Cookie(session.CookieName()); err == nil && s.cfg.Sessions.Valid(cookie.Value) {
-		http.Redirect(w, r, "/", http.StatusFound)
-		return
-	}
-	token, err := s.cfg.Sessions.Issue()
-	if err != nil {
-		http.Error(w, "could not create session", http.StatusInternalServerError)
-		log.Printf("[error] issuing session: %v", err)
-		return
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     session.CookieName(),
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+	// All /api/* routes require a valid token in the X-Relay-Token header.
+	s.mux.HandleFunc("/favicon.ico", http.NotFound)
+	s.mux.HandleFunc("/v1/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
 	})
 
-	log.Printf("[session] new session issued; active sessions: %d", s.cfg.Sessions.Count())
-	http.Redirect(w, r, "/", http.StatusFound)
+	s.mux.HandleFunc("/api/info", s.requireToken(s.handleInfo))
+	s.mux.HandleFunc("/api/tree", s.requireToken(s.handleTree))
+	s.mux.HandleFunc("/api/blob", s.requireToken(s.handleBlob))
+	s.mux.HandleFunc("/api/commits", s.requireToken(s.handleCommits))
+
+	// Serve the SPA for everything else — no auth needed.
+	// The session token is embedded directly in the HTML at serve time.
+	s.mux.HandleFunc("/", s.handleSPA)
 }
 
-func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
+func (s *Server) requireToken(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-
-		cookie, err := r.Cookie(session.CookieName())
-		if err != nil || !s.cfg.Sessions.Valid(cookie.Value) {
-			if strings.HasPrefix(r.URL.Path, "/api/") {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(`{"error":"session expired, please refresh"}`))
-				return
-			}
-			http.Redirect(w, r, "/auth/login", http.StatusFound)
+		tok := r.Header.Get("X-Relay-Token")
+		if tok == "" || tok != s.token {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"error":"invalid or expired session"}`))
 			return
 		}
 		next(w, r)
@@ -141,7 +110,6 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, resp)
 }
 
-// handleTree returns the recursive file tree for a branch.
 // Query param: ?branch=<name>  (defaults to the configured branch)
 func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 	branch := r.URL.Query().Get("branch")
@@ -163,7 +131,6 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 }
 
 // Query params: ?sha=<blob_sha>&path=<file_path>
-// path is used only to set the Content-Type correctly.
 func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 	sha := r.URL.Query().Get("sha")
 	path := r.URL.Query().Get("path")
@@ -184,7 +151,7 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ct := mimeForPath(path)
+	ct := blobContentType(path)
 	w.Header().Set("Content-Type", ct)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Cache-Control", "no-store")
@@ -213,8 +180,17 @@ func (s *Server) handleCommits(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSPA(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[spa] %s %s", r.Method, r.URL.Path) // ← add this
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.URL.Path != "/" && r.URL.Path != "" {
+		http.NotFound(w, r)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(spaHTML)) //nolint:errcheck
+	w.Write(s.renderedSPA)
 }

@@ -1,11 +1,7 @@
 package server
 
-import (
-	"github.ibm.com/soub4i/gh-relay/internal/version"
-)
+import "github.ibm.com/soub4i/gh-relay/internal/version"
 
-// spaHTML is the single-file SPA served to all guests.
-// It bundles: Prism.js (syntax highlighting), a file tree, a code viewer,
 var spaHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -56,7 +52,6 @@ var spaHTML = `<!DOCTYPE html>
   #file-tree::-webkit-scrollbar { width: 6px; }
   #file-tree::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-  /* tree-file: a single clickable row */
   .tree-file { display: flex; align-items: center; gap: 6px; padding: 3px 0; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; border-radius: var(--radius); }
   .tree-file:hover { background: var(--bg-hover); }
   .tree-file.active { background: var(--bg-active); color: var(--accent); }
@@ -80,7 +75,6 @@ var spaHTML = `<!DOCTYPE html>
   #line-nums { padding: 16px 0 16px 16px; text-align: right; color: var(--text-muted); font-family: var(--font-mono); font-size: 13px; line-height: 1.6; user-select: none; flex-shrink: 0; min-width: 48px; border-right: 1px solid var(--border); margin-right: 16px; white-space: pre; }
   #code-content { padding: 16px 16px 16px 0; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; white-space: pre; flex: 1; tab-size: 2; }
 
-  /* ── Prism theme (GitHub Dark) ───────────────────────────── */
   .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #8b949e; font-style: italic; }
   .token.punctuation { color: #e6edf3; }
   .token.namespace { opacity: .7; }
@@ -119,6 +113,7 @@ var spaHTML = `<!DOCTYPE html>
     :root { --tree-w: 220px; }
   }
 </style>
+<script>/*__RELAY_TOKEN__*/</script>
 </head>
 <body>
 <div id="app">
@@ -144,7 +139,7 @@ var spaHTML = `<!DOCTYPE html>
     </aside>
     <main id="viewer">
       <div id="welcome">
-        <div class="big-icon">🗂️</div>
+        <div class="big-icon">📂</div>
         <h2>Select a file to view</h2>
         <p>Browse the tree on the left to explore this repository.</p>
       </div>
@@ -454,9 +449,11 @@ function showToast(msg) {
 }
 
 function api(path) {
-  return fetch(path, { credentials: 'same-origin' }).then(function(r) {
-   if (r.status === 401) {
-      window.location.href = '/auth/login';
+  return fetch(path, {
+    headers: { 'X-Relay-Token': __RELAY_TOKEN__ }
+  }).then(function(r) {
+    if (r.status === 401) {
+      document.body.innerHTML = '<div style="padding:40px;font-family:sans-serif;color:#f85149">Session expired — please reload the page.</div>';
       return new Promise(function() {});
     }
     if (!r.ok) throw new Error('HTTP ' + r.status + ' from ' + path);
@@ -464,7 +461,6 @@ function api(path) {
   });
 }
 
-// ── Boot ─────────────────────────────────────────────────────
 async function boot() {
   try {
     var infoResp = await api('/api/info');
@@ -474,6 +470,7 @@ async function boot() {
     return;
   }
 
+  // Header.
   $('hdr-repo').textContent = state.info.owner + ' / ' + state.info.repo;
   $('hdr-desc').textContent = state.info.description || '';
   var badge = $('hdr-badge');
@@ -565,7 +562,7 @@ function renderTree(entries) {
         var row = document.createElement('div');
         row.className = 'tree-row';
         row.style.paddingLeft = pl;
-        row.innerHTML = '<span class="tree-icon">📂</span><span class="tree-name">' + key + '</span>';
+        row.innerHTML = '<span class="tree-icon">📁</span><span class="tree-name">' + key + '</span>';
         var children = document.createElement('div');
         children.className = 'tree-children';
         children.appendChild(renderNode(item.__children, depth + 1));
@@ -596,7 +593,7 @@ function fileIcon(path) {
     'html':'🌐','css':'🎨','json':'📋','yaml':'📋','yml':'📋','md':'📝',
     'sh':'⚙️','bash':'⚙️','toml':'📋','sql':'🗄️','proto':'📡',
     'dockerfile':'🐳','png':'🖼️','jpg':'🖼️','jpeg':'🖼️','gif':'🖼️','svg':'🖼️',
-    'pdf':'📕','zip':'📦','tar':'📦','lock':'🔒','sum':'🔒', 
+    'pdf':'📕','zip':'📦','tar':'📦','lock':'🔒','sum':'🔒',
   };
   return icons[ext] || '📄';
 }

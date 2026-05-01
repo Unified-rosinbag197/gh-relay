@@ -95,3 +95,31 @@ func mimeForPath(path string) string {
 		return "application/octet-stream"
 	}
 }
+
+func blobContentType(path string) string {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".gif":
+		return "image/gif"
+	case ".webp":
+		return "image/webp"
+	case ".svg":
+		return "image/svg+xml"
+	case ".ico":
+		return "image/x-icon"
+	case ".pdf":
+		return "application/pdf"
+	case ".zip", ".tar", ".gz", ".bz2", ".xz", ".7z",
+		".exe", ".bin", ".dll", ".so", ".dylib",
+		".wasm", ".pyc", ".pyo", ".class":
+		return "application/octet-stream"
+	default:
+		// Every other file — source code, config, markdown, etc. — is sent as
+		// plain text. The frontend does all syntax highlighting itself.
+		return "text/plain; charset=utf-8"
+	}
+}

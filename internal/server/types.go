@@ -21,7 +21,9 @@ type Config struct {
 
 // Server is the gh-relay HTTP server.
 type Server struct {
-	cfg Config
-	mux *http.ServeMux
-	srv *http.Server
+	cfg         Config
+	mux         *http.ServeMux
+	srv         *http.Server
+	token       string
+	renderedSPA []byte
 }
