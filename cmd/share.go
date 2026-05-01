@@ -131,7 +131,7 @@ func printShareInfo(l *log.Logger, f shareFlags, owner, repo, branch string, inf
 	l.Printf("    %s", url)
 	l.Println()
 	if f.expire > 0 {
-		l.Printf("  Session expires in: %s", f.expire)
+		l.Printf("  Session expires in: %s (%s)", f.expire, time.Now().Add(f.expire).Format(time.RFC1123))
 	} else {
 		l.Print("  Session expires: when you press Ctrl+C")
 	}
