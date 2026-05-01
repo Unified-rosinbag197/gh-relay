@@ -8,6 +8,7 @@ var spaHTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>gh-relay</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -19,7 +20,6 @@ var spaHTML = `<!DOCTYPE html>
     --text:      #e6edf3;
     --text-muted:#8b949e;
     --accent:    #58a6ff;
-    --accent2:   #3fb950;
     --danger:    #f85149;
     --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
     --font-ui:   -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
@@ -55,7 +55,6 @@ var spaHTML = `<!DOCTYPE html>
   .tree-file { display: flex; align-items: center; gap: 6px; padding: 3px 0; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; border-radius: var(--radius); }
   .tree-file:hover { background: var(--bg-hover); }
   .tree-file.active { background: var(--bg-active); color: var(--accent); }
-  /* tree-dir: column container — header row on top, children below */
   .tree-dir { display: flex; flex-direction: column; user-select: none; }
   .tree-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; cursor: pointer; white-space: nowrap; overflow: hidden; border-radius: var(--radius); }
   .tree-row:hover { background: var(--bg-hover); }
@@ -71,21 +70,13 @@ var spaHTML = `<!DOCTYPE html>
   #viewer-body { flex: 1; overflow: auto; position: relative; }
   #viewer-body::-webkit-scrollbar { width: 8px; height: 8px; }
   #viewer-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-  #code-wrap { display: flex; min-height: 100%; }
-  #line-nums { padding: 16px 0 16px 16px; text-align: right; color: var(--text-muted); font-family: var(--font-mono); font-size: 13px; line-height: 1.6; user-select: none; flex-shrink: 0; min-width: 48px; border-right: 1px solid var(--border); margin-right: 16px; white-space: pre; }
-  #code-content { padding: 16px 16px 16px 0; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; white-space: pre; flex: 1; tab-size: 2; }
 
-  .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #8b949e; font-style: italic; }
-  .token.punctuation { color: #e6edf3; }
-  .token.namespace { opacity: .7; }
-  .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #79c0ff; }
-  .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted { color: #a5d6ff; }
-  .token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string { color: #d2a8ff; }
-  .token.atrule, .token.attr-value, .token.keyword { color: #ff7b72; }
-  .token.function, .token.class-name { color: #d2a8ff; }
-  .token.regex, .token.important, .token.variable { color: #ffa657; }
-  .token.important, .token.bold { font-weight: bold; }
-  .token.italic { font-style: italic; }
+  #code-wrap { display: flex; min-height: 100%; }
+  #line-nums { padding: 16px 0 16px 16px; text-align: right; color: var(--text-muted); font-family: var(--font-mono); font-size: 13px; line-height: 1.6; user-select: none; flex-shrink: 0; min-width: 48px; border-right: 1px solid var(--border); margin-right: 0; white-space: pre; }
+  #code-content { flex: 1; overflow: visible; }
+  /* Override hljs defaults to fit our layout */
+  #code-content pre { margin: 0; border-radius: 0; background: transparent !important; }
+  #code-content pre code.hljs { padding: 16px; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; background: transparent !important; white-space: pre; display: block; }
 
   #welcome { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--text-muted); }
   #welcome .big-icon { font-size: 48px; }
@@ -109,16 +100,14 @@ var spaHTML = `<!DOCTYPE html>
   .commit-meta { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
   #commits-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1; }
 
-  @media (max-width: 640px) {
-    :root { --tree-w: 220px; }
-  }
+  @media (max-width: 640px) { :root { --tree-w: 220px; } }
 </style>
 <script>/*__RELAY_TOKEN__*/</script>
 </head>
 <body>
 <div id="app">
   <header id="header">
-    <span class="logo">gh-relay</span> version: ` + version.Version + `  | <small>by <a href="https://github.com/soub4i" target="_blank" style="color: var(--accent);">soub4i</a></small>
+    <span class="logo">gh-relay</span>&nbsp;version: ` + version.Version + `&nbsp;|&nbsp;<small>by <a href="https://github.com/soub4i" target="_blank" style="color:var(--accent)">soub4i</a></small>
     <div class="meta">
       <div class="repo-name" id="hdr-repo">Loading…</div>
       <div class="repo-desc" id="hdr-desc"></div>
@@ -157,287 +146,20 @@ var spaHTML = `<!DOCTYPE html>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/rust.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/dockerfile.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/protobuf.min.js"></script>
 <script>
-// ── Minimal Prism.js core + language support (inlined, no CDN) ──────────────
-// We include a stripped-down Prism that covers the most common languages.
-var Prism = (function() {
-  var _self = {};
-  _self.languages = {};
-  _self.languages.extend = function(id, redef) {
-    var lang = _self.util.clone(_self.languages[id]);
-    for (var key in redef) { lang[key] = redef[key]; }
-    return lang;
-  };
-  _self.util = {
-    clone: function deepClone(o, visited) {
-      var clone, id;
-      visited = visited || [];
-      switch (_self.util.type(o)) {
-        case 'Object':
-          if (visited.indexOf(o) !== -1) { return o; }
-          clone = {};
-          visited.push(o);
-          for (var key in o) { if (o.hasOwnProperty(key)) { clone[key] = deepClone(o[key], visited); } }
-          return clone;
-        case 'Array':
-          if (visited.indexOf(o) !== -1) { return o; }
-          clone = [];
-          visited.push(o);
-          o.forEach(function(v, i) { clone[i] = deepClone(v, visited); });
-          return clone;
-        default: return o;
-      }
-    },
-    type: function(o) {
-      return Object.prototype.toString.call(o).match(/\[object (\w+)\]/)[1];
-    },
-    objId: function(obj) {
-      if (!obj['__id']) { Object.defineProperty(obj, '__id', { value: ++Prism.util.objId.uid }); }
-      return obj['__id'];
-    }
-  };
-  _self.util.objId.uid = 0;
+hljs.configure({ ignoreUnescapedHTML: true });
 
-  _self.languages.markup = {
-    'comment': /<!--[\s\S]*?-->/,
-    'prolog': /<\?[\s\S]+?\?>/,
-    'doctype': /<!DOCTYPE[\s\S]+?>/i,
-    'cdata': /<!\[CDATA\[[\s\S]*?]]>/i,
-    'tag': { pattern: /<\/?(?!\d)[^\s>\/=$<%]+(?:\s+[^\s>\/=]+(?:=(?:("|')(?:\\[\s\S]|(?!\1)[^\\])*\1|[^\s'">=]+))?)*\s*\/?>/i, greedy: true, inside: { 'tag': { pattern: /^<\/?[^\s>\/]+/, inside: { 'punctuation': /^<\/?/, 'namespace': /^[^\s>\/:]+:/ } }, 'attr-value': { pattern: /=(?:("|')(?:\\[\s\S]|(?!\1)[^\\])*\1|[^\s'">=]+)/i, inside: { 'punctuation': [/^=/, /("|')/, /^(?!["'])./, /(?!["']).$/ ] } }, 'punctuation': /\/?>/,'attr-name': { pattern: /[^\s>\/]+/, inside: { 'namespace': /^[^\s>\/:]+:/ } } } },
-    'entity': /&[\da-z]{1,8};/i,
-  };
-  _self.languages.html = _self.languages.markup;
-  _self.languages.mathml = _self.languages.markup;
-  _self.languages.svg = _self.languages.markup;
-
-  _self.languages.css = {
-    'comment': /\/\*[\s\S]*?\*\//,
-    'atrule': { pattern: /@[\w-]+[\s\S]*?(?:;|(?=\s*\{))/, inside: { 'rule': /@[\w-]+/ } },
-    'url': /url\((?:(["'])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1|.*?)\)/i,
-    'selector': /[^{}\s][^{};]*?(?=\s*\{)/,
-    'string': { pattern: /("|')(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/, greedy: true },
-    'property': /[-_a-z\xA0-\uFFFF][-\w\xA0-\uFFFF]*(?=\s*:)/i,
-    'important': /\B!important\b/i,
-    'function': /[-a-z0-9]+(?=\()/i,
-    'punctuation': /[(){};:,]/
-  };
-
-  _self.languages.clike = {
-    'comment': [
-      { pattern: /(^|[^\\])\/\*[\s\S]*?(?:\*\/|$)/, lookbehind: true },
-      { pattern: /(^|[^\\:])\/\/.*/, lookbehind: true, greedy: true }
-    ],
-    'string': { pattern: /(["'])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/, greedy: true },
-    'class-name': { pattern: /((?:\b(?:class|interface|extends|implements|trait|instanceof|new)\s+)|(?:catch\s+\())[\w.\\]+/i, lookbehind: true, inside: { 'punctuation': /[.\\]/ } },
-    'keyword': /\b(?:if|else|while|do|for|return|in|instanceof|function|new|try|throw|catch|finally|null|break|continue)\b/,
-    'boolean': /\b(?:true|false)\b/,
-    'function': /\w+(?=\()/,
-    'number': /\b0x[\da-f]+\b|(?:\b\d+\.?\d*|\B\.\d+)(?:e[+-]?\d+)?/i,
-    'operator': /[<>]=?|[!=]=?=?|--?|\+\+?|&&?|\|\|?|[?*/~^%]/,
-    'punctuation': /[{}[\];(),.:]/
-  };
-
-  _self.languages.javascript = _self.languages.extend('clike', {
-    'class-name': [ _self.languages.clike['class-name'], { pattern: /(^|[^$\w\xA0-\uFFFF])[_$A-Z\xA0-\uFFFF][$\w\xA0-\uFFFF]*(?=\.(?:prototype|constructor))/, lookbehind: true } ],
-    'keyword': [{ pattern: /((?:^|})\s*)(?:catch|finally)\b/, lookbehind: true }, /\b(?:as|async|await|break|case|class|const|continue|debugger|default|delete|do|else|enum|export|extends|for|from|function|get|if|implements|import|in|instanceof|interface|let|new|null|of|package|private|protected|public|return|set|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield)\b/],
-    'number': /\b(?:(?:0[xX][\dA-Fa-f]+|0[bB][01]+|0[oO][0-7]+)n?|\d+n|NaN|Infinity)\b|(?:\B|\b\d+)\.?\d*(?:[Ee][+-]?\d+)?/,
-    'function': /[_$a-zA-Z\xA0-\uFFFF][$\w\xA0-\uFFFF]*(?=\s*(?:\.\s*(?:apply|bind|call)\s*)?\()/,
-    'operator': /--|\+\+|\*\*=?|=>|&&|\|\||[!<>]=?|>>>?=?|[-+*/%&|^~]=?|[?:]/,
-  });
-  _self.languages.js = _self.languages.javascript;
-
-  _self.languages.go = {
-    'comment': [
-      { pattern: /(^|[^\\])\/\*[\s\S]*?(?:\*\/|$)/, lookbehind: true },
-      { pattern: /(^|[^\\:])\/\/.*/, lookbehind: true, greedy: true }
-    ],
-    'string': { pattern: /(["` + "`" + `])(?:\\[\s\S]|(?!\1)[^\\\r\n])*\1/, greedy: true },
-    'keyword': /\b(?:break|case|chan|const|continue|default|defer|else|fallthrough|for|func|go|goto|if|import|interface|map|package|range|return|select|struct|switch|type|var)\b/,
-    'builtin': /\b(?:append|cap|close|complex|copy|delete|error|false|imag|iota|len|make|new|nil|panic|print|println|real|recover|true)\b/,
-    'boolean': /\b(?:true|false)\b/,
-    'number': /\b0x[\da-f]+\b|\b\d+\.?\d*(?:e[+-]?\d+)?(?:i)?\b/i,
-    'operator': /:=|[<>]=?|[!]=?|&&|\|\||[+\-*\/%&^|~]=?|<<|>>/,
-    'punctuation': /[{}[\]();,.]/
-  };
-
-  _self.languages.python = _self.languages.extend('clike', {
-    'comment': { pattern: /(^|[^\\])#.*/, lookbehind: true },
-    'string': { pattern: /(?:[rub]|rb|br)?(?:("""|''')[\s\S]*?\1|("|')(?:\\.|(?!\2)[^\\\r\n])*\2)/i, greedy: true },
-    'keyword': /\b(?:and|as|assert|async|await|break|class|continue|def|del|elif|else|except|exec|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|print|raise|return|try|while|with|yield)\b/,
-    'builtin': /\b(?:__import__|abs|all|any|ascii|bin|bool|bytearray|bytes|callable|chr|classmethod|compile|complex|delattr|dict|dir|divmod|enumerate|eval|exec|filter|float|format|frozenset|getattr|globals|hasattr|hash|help|hex|id|input|int|isinstance|issubclass|iter|len|list|locals|map|max|memoryview|min|next|object|oct|open|ord|pow|property|range|repr|reversed|round|set|setattr|slice|sorted|staticmethod|str|sum|super|tuple|type|vars|zip)\b/,
-    'boolean': /\b(?:True|False|None)\b/,
-    'number': /(?:\b(?=\d)|\B(?=\.))(?:0[bo])?(?:(?:\d|0x[\da-f])[\da-f]*\.?\d*|\.\d+)(?:e[+-]?\d+)?j?\b/i,
-    'operator': /[-+%=]=?|!=|\*\*?=?|\/\/?=?|<[<=>]?|>[=>]?|[&|^~]|\b(?:or|and|not|in|is)\b/,
-    'punctuation': /[{}[\];(),.:]/
-  });
-
-  _self.languages.rust = _self.languages.extend('clike', {
-    'comment': [
-      { pattern: /\/\/!.+|\/\/(?!\/).*|\/\*[\s\S]*?\*\//, greedy: true },
-    ],
-    'keyword': /\b(?:abstract|as|async|await|become|box|break|const|continue|crate|do|dyn|else|enum|extern|final|fn|for|if|impl|in|let|loop|macro|match|mod|move|mut|override|priv|pub|ref|return|self|Self|static|struct|super|trait|try|type|typeof|unsafe|unsized|use|virtual|where|while|yield)\b/,
-    'builtin': /\b(?:bool|char|f32|f64|i8|i16|i32|i64|i128|isize|str|u8|u16|u32|u64|u128|usize|String|Vec|Option|Result|Box|Rc|Arc|Cell|RefCell|HashMap|HashSet)\b/,
-  });
-
-  _self.languages.typescript = _self.languages.extend('javascript', {
-    'class-name': { pattern: /(\b(?:class|extends|implements|instanceof|interface|new|type)\s+)(?!keyof\b)[_$A-Za-z\xA0-\uFFFF][$\w\xA0-\uFFFF]*/, lookbehind: true },
-    'keyword': /\b(?:abstract|as|async|await|break|case|catch|class|const|constructor|continue|debugger|declare|default|delete|do|else|enum|export|extends|finally|for|from|function|get|if|implements|import|in|instanceof|interface|is|keyof|let|module|namespace|new|null|of|package|private|protected|public|readonly|return|require|set|static|super|switch|this|throw|try|type|typeof|undefined|var|void|while|with|yield)\b/,
-  });
-  _self.languages.ts = _self.languages.typescript;
-
-  _self.languages.json = {
-    'property': { pattern: /(^|[^\\])"(?:\\.|[^\\"\r\n])*"(?=\s*:)/, lookbehind: true, greedy: true },
-    'string': { pattern: /(^|[^\\])"(?:\\.|[^\\"\r\n])*"(?!\s*:)/, lookbehind: true, greedy: true },
-    'null': { pattern: /\bnull\b/, alias: 'keyword' },
-    'boolean': /\b(?:true|false)\b/,
-    'number': /-?\d+\.?\d*(?:e[+-]?\d+)?/i,
-    'punctuation': /[{}[\],]/,
-    'operator': /:/
-  };
-
-  _self.languages.yaml = {
-    'scalar': { pattern: /([|>][-+\d]*(?:\n[ \t]+.+)+)/, lookbehind: true, alias: 'string' },
-    'comment': /#.*/,
-    'key': { pattern: /(\s*(?:^|[:\-,[{\r\n?])[ \t]*(?:![^\s]+)?[ \t]*)[^\r\n{[\]},#\!\|>]+?(?=\s*:\s)/, lookbehind: true, alias: 'atrule' },
-    'directive': { pattern: /(^[ \t]*)%.+/m, lookbehind: true, alias: 'important' },
-    'datetime': { pattern: /([:\-,[{\r\n](?:[ \t]+|(?!.)))\d{4}-\d\d?-\d\d?(?:[tT]|[ \t]+)\d\d?:\d{2}:\d{2}(?:\.\d*)?(?:[ \t]*Z|[-+]\d\d?(?::\d{2})?)?(?=[ \t]*$)/m, lookbehind: true, alias: 'number' },
-    'boolean': { pattern: /([:\-,[{\r\n](?:[ \t]+|(?!.)))(?:true|false)[ \t]*(?=$|,|\]|\})/im, lookbehind: true, alias: 'important' },
-    'null': { pattern: /([:\-,[{\r\n](?:[ \t]+|(?!.)))(?:null|~)[ \t]*(?=$|,|\]|\})/im, lookbehind: true, alias: 'important' },
-    'string': { pattern: /([:\-,[{\r\n](?:[ \t]+|(?!.)))("|')(?:(?!\2)[^\\\r\n]|\\.)*\2(?=[ \t]*(?:$|,|\]|\}))/m, lookbehind: true, greedy: true },
-    'number': { pattern: /([:\-,[{\r\n](?:[ \t]+|(?!.)))[+-]?(?:0x[\da-f]+|0o[0-7]+|(?:\d+\.?\d*|\.?\d+)(?:e[+-]?\d+)?|\.inf|\.nan)[ \t]*(?=$|,|\]|\})/im, lookbehind: true },
-    'tag': /![^\s]+/,
-    'punctuation': /----|\.\.\.|[:\[\]{},]/
-  };
-
-  // ── Tokenizer ──────────────────────────────────────────────
-  function matchPattern(pattern, pos, text, lookbehind) {
-    pattern.lastIndex = pos;
-    var match = pattern.exec(text);
-    if (match && lookbehind && match[1]) {
-      var lookbehindLength = match[1].length;
-      match.index += lookbehindLength;
-      match[0] = match[0].slice(lookbehindLength);
-    }
-    return match;
-  }
-
-  function matchGrammar(text, tokenList, grammar, startNode, startPos, rematch) {
-    for (var token in grammar) {
-      if (!grammar.hasOwnProperty(token) || !grammar[token]) { continue; }
-      var patterns = grammar[token];
-      patterns = Array.isArray(patterns) ? patterns : [patterns];
-      for (var j = 0; j < patterns.length; ++j) {
-        if (rematch && rematch.cause == token + ',' + j) { return; }
-        var patternObj = patterns[j];
-        var inside = patternObj.inside;
-        var lookbehind = !!patternObj.lookbehind;
-        var greedy = !!patternObj.greedy;
-        var alias = patternObj.alias;
-        var pattern = patternObj.pattern || patternObj;
-        if (greedy && !pattern.sticky) {
-          var flags = pattern.toString().match(/[imsuy]*$/)[0];
-          pattern = RegExp(pattern.source, flags + (flags.indexOf('g') !== -1 ? '' : 'g'));
-        }
-        var currentNode = startNode.next;
-        for (var pos = startPos; currentNode !== tokenList.tail; pos += currentNode.value.length, currentNode = currentNode.next) {
-          if (rematch && pos >= rematch.reach) { break; }
-          var str = currentNode.value;
-          if (typeof str !== 'string') { continue; }
-          var removeCount = 1;
-          var match;
-          if (greedy) {
-            match = matchPattern(pattern, pos, text, lookbehind);
-            if (!match) { break; }
-            var from = match.index;
-            var to = from + match[0].length;
-            var p = pos;
-            p += currentNode.value.length;
-            while (from >= p) { currentNode = currentNode.next; p += currentNode.value.length; }
-            p -= currentNode.value.length;
-            pos = p;
-            if (typeof currentNode.value !== 'string') { continue; }
-            for (var k = currentNode; k !== tokenList.tail && (p < to || typeof k.value === 'string'); k = k.next) {
-              removeCount++;
-              p += k.value.length;
-            }
-            removeCount--;
-            str = text.slice(pos, p);
-            match.index -= pos;
-          } else {
-            match = matchPattern(pattern, 0, str, lookbehind);
-            if (!match) { continue; }
-          }
-          var from = match.index;
-          var matchStr = match[0];
-          var before = str.slice(0, from);
-          var after = str.slice(from + matchStr.length);
-          var reach = pos + str.length;
-          if (rematch && reach > rematch.reach) { rematch.reach = reach; }
-          var removeFrom = currentNode.prev;
-          if (before) { removeFrom = addAfter(tokenList, removeFrom, before); pos += before.length; }
-          removeRange(tokenList, removeFrom, removeCount);
-          var wrapped = new Token(token, inside ? tokenize(matchStr, inside) : matchStr, alias, matchStr);
-          currentNode = addAfter(tokenList, removeFrom, wrapped);
-          if (after) { addAfter(tokenList, currentNode, after); }
-          if (removeCount > 1) {
-            var nestedRematch = { cause: token + ',' + j, reach: reach };
-            matchGrammar(text, tokenList, grammar, currentNode.prev, pos, nestedRematch);
-            if (rematch && nestedRematch.reach > rematch.reach) { rematch.reach = nestedRematch.reach; }
-          }
-          break;
-        }
-      }
-    }
-  }
-
-  function LinkedList() { var head = { value: null, prev: null, next: null }; var tail = { value: null, prev: head, next: null }; head.next = tail; this.head = head; this.tail = tail; this.length = 0; }
-  function addAfter(list, node, value) { var next = node.next; var newNode = { value: value, prev: node, next: next }; node.next = newNode; next.prev = newNode; list.length++; return newNode; }
-  function removeRange(list, node, count) { var next = node.next; for (var i = 0; i < count && next !== list.tail; i++) { next = next.next; } node.next = next; next.prev = node; list.length -= i; }
-  function toArray(list) { var array = []; var node = list.head.next; while (node !== list.tail) { array.push(node.value); node = node.next; } return array; }
-
-  function Token(type, content, alias, matchedStr) { this.type = type; this.content = content; this.alias = alias; this.length = (matchedStr || '').length | 0; }
-
-  function tokenize(text, grammar) {
-    var tokenList = new LinkedList();
-    addAfter(tokenList, tokenList.head, text);
-    matchGrammar(text, tokenList, grammar, tokenList.head, 0, null);
-    return toArray(tokenList);
-  }
-
-  function stringify(o, language) {
-    if (typeof o == 'string') { return escapeHtml(o); }
-    if (Array.isArray(o)) { return o.map(function(e) { return stringify(e, language); }).join(''); }
-    var env = { type: o.type, content: stringify(o.content, language), tag: 'span', classes: ['token', o.type], attributes: {}, language: language };
-    var aliases = o.alias;
-    if (aliases) { env.classes = env.classes.concat(aliases); }
-    return '<span class="' + env.classes.join(' ') + '">' + env.content + '</span>';
-  }
-
-  function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  _self.highlight = function(text, grammar, language) {
-    return stringify(tokenize(text, grammar), language);
-  };
-
-  _self.highlightElement = function(el) {
-    var language = el.className.match(/language-(\w+)/);
-    if (!language) { return; }
-    language = language[1];
-    var grammar = _self.languages[language];
-    if (!grammar) { el.textContent = el.textContent; return; }
-    el.innerHTML = _self.highlight(el.textContent, grammar, language);
-  };
-
-  return _self;
-})();
-
-
-var state = {
-  info: null,
-  tree: null,          // flat list of TreeEntry
-  activeFile: null,    // currently open file path
-  filterText: '',
-};
+var state = { info: null, tree: null, activeFile: null, filterText: '' };
 
 function $(id) { return document.getElementById(id); }
 
@@ -470,20 +192,18 @@ async function boot() {
     return;
   }
 
-  // Header.
   $('hdr-repo').textContent = state.info.owner + ' / ' + state.info.repo;
   $('hdr-desc').textContent = state.info.description || '';
   var badge = $('hdr-badge');
   badge.textContent = state.info.private ? '🔒 Private' : '🌐 Public';
   badge.className = 'badge' + (state.info.private ? ' private' : '');
 
-  // Branch selector.
   var sel = $('branch-select');
   (state.info.branches || [state.info.branch]).forEach(function(b) {
     var opt = document.createElement('option');
     opt.value = b;
     opt.textContent = b;
-    if (b === state.info.branch) { opt.selected = true; }
+    if (b === state.info.branch) opt.selected = true;
     sel.appendChild(opt);
   });
   sel.style.display = '';
@@ -516,27 +236,25 @@ function renderTree(entries) {
   container.innerHTML = '';
 
   if (filter) {
-    // Flat list when filtering.
     filtered.forEach(function(e) {
       if (e.type !== 'blob') return;
       var row = document.createElement('div');
       row.className = 'tree-file' + (state.activeFile === e.path ? ' active' : '');
       row.style.paddingLeft = '12px';
       row.innerHTML = '<span class="tree-icon">' + fileIcon(e.path) + '</span><span class="tree-name" title="' + e.path + '">' + e.path + '</span>';
-      row.addEventListener('click', function() { openFile(e); row.classList.add('active'); });
+      row.addEventListener('click', function() { openFile(e); });
       container.appendChild(row);
     });
     return;
   }
 
-  // Build nested tree structure.
   var root = {};
   entries.forEach(function(e) {
     var parts = e.path.split('/');
     var node = root;
     parts.forEach(function(p, i) {
-      if (!node[p]) { node[p] = { __entry: null, __children: {} }; }
-      if (i === parts.length - 1) { node[p].__entry = e; }
+      if (!node[p]) node[p] = { __entry: null, __children: {} };
+      if (i === parts.length - 1) node[p].__entry = e;
       node = node[p].__children;
     });
   });
@@ -555,7 +273,6 @@ function renderTree(entries) {
       var hasChildren = Object.keys(item.__children).length > 0;
       var entry = item.__entry;
       var pl = (depth * 12 + 12) + 'px';
-
       if (hasChildren) {
         var dir = document.createElement('div');
         dir.className = 'tree-dir';
@@ -566,7 +283,11 @@ function renderTree(entries) {
         var children = document.createElement('div');
         children.className = 'tree-children';
         children.appendChild(renderNode(item.__children, depth + 1));
-        row.addEventListener('click', function(ev) { ev.stopPropagation(); dir.classList.toggle('open'); row.querySelector('.tree-icon').textContent = dir.classList.contains('open') ? '📂' : '📁'; });
+        row.addEventListener('click', function(ev) {
+          ev.stopPropagation();
+          dir.classList.toggle('open');
+          row.querySelector('.tree-icon').textContent = dir.classList.contains('open') ? '📂' : '📁';
+        });
         dir.appendChild(row);
         dir.appendChild(children);
         frag.appendChild(dir);
@@ -582,26 +303,40 @@ function renderTree(entries) {
     });
     return frag;
   }
-
   container.appendChild(renderNode(root, 0));
 }
 
 function fileIcon(path) {
-  var ext = (path.split('.').pop() || '').toLowerCase();
+  var name = path.split('/').pop().toLowerCase();
+  var ext = name.includes('.') ? name.split('.').pop() : '';
   var icons = {
     'go':'🔵','js':'🟡','ts':'🔷','tsx':'🔷','jsx':'🟡','py':'🐍','rs':'🦀',
     'html':'🌐','css':'🎨','json':'📋','yaml':'📋','yml':'📋','md':'📝',
     'sh':'⚙️','bash':'⚙️','toml':'📋','sql':'🗄️','proto':'📡',
-    'dockerfile':'🐳','png':'🖼️','jpg':'🖼️','jpeg':'🖼️','gif':'🖼️','svg':'🖼️',
+    'png':'🖼️','jpg':'🖼️','jpeg':'🖼️','gif':'🖼️','svg':'🖼️',
     'pdf':'📕','zip':'📦','tar':'📦','lock':'🔒','sum':'🔒',
   };
-  return icons[ext] || '📄';
+  var nameIcons = { 'dockerfile':'🐳', 'makefile':'⚙️', 'license':'📜', 'readme.md':'📝' };
+  return nameIcons[name] || icons[ext] || '📄';
 }
+
+// Map file extensions to hljs language names
+var EXT_LANG = {
+  go:'go', rs:'rust', py:'python', js:'javascript', jsx:'javascript',
+  ts:'typescript', tsx:'typescript', html:'html', htm:'html', css:'css',
+  scss:'css', json:'json', yaml:'yaml', yml:'yaml', sh:'bash', bash:'bash',
+  zsh:'bash', md:'markdown', sql:'sql', proto:'protobuf', xml:'xml',
+  toml:'ini', dockerfile:'dockerfile', tf:'hcl',
+};
+
+var BINARY_EXTS = {
+  png:1, jpg:1, jpeg:1, gif:1, bmp:1, webp:1, ico:1,
+  pdf:1, zip:1, gz:1, tar:1, bz2:1, xz:1,
+  exe:1, dll:1, so:1, dylib:1, bin:1, wasm:1, pyc:1, pyo:1, class:1,
+};
 
 async function openFile(entry) {
   state.activeFile = entry.path;
-
-  // Update active state in tree.
   document.querySelectorAll('.tree-file').forEach(function(el) {
     el.classList.toggle('active', el.dataset.path === entry.path);
   });
@@ -609,7 +344,7 @@ async function openFile(entry) {
   var viewer = $('viewer');
   viewer.innerHTML =
     '<div id="viewer-header"><span class="file-path" id="vhdr-path"></span><span class="file-size" id="vhdr-size"></span></div>' +
-    '<div id="viewer-body"><div style="display:flex;align-items:center;justify-content:center;height:100%;"><div class="spinner"></div></div></div>';
+    '<div id="viewer-body"><div style="display:flex;align-items:center;justify-content:center;height:100%"><div class="spinner"></div></div></div>';
 
   $('vhdr-path').textContent = entry.path;
   $('vhdr-size').textContent = formatBytes(entry.size || 0);
@@ -617,18 +352,7 @@ async function openFile(entry) {
   try {
     var resp = await api('/api/blob?sha=' + encodeURIComponent(entry.sha) + '&path=' + encodeURIComponent(entry.path));
     var ct = resp.headers.get('Content-Type') || '';
-    // Determine binary by file extension — never trust Content-Type alone
-    // because the server may return application/octet-stream for extensionless
-    // files like Dockerfile, Makefile, LICENSE which are plain text.
-    var BINARY_EXTS = {
-      png:1, jpg:1, jpeg:1, gif:1, bmp:1, webp:1, ico:1,
-      pdf:1,
-      zip:1, gz:1, tar:1, bz2:1, xz:1,
-      exe:1, dll:1, so:1, dylib:1, bin:1,
-      wasm:1, pyc:1, pyo:1, class:1,
-    };
-    // For files with no extension (Dockerfile, Makefile, LICENSE, etc.)
-    // the ext equals the full filename — treat those as text.
+
     var nameParts = entry.path.split('/').pop().split('.');
     var fileExt = nameParts.length > 1 ? nameParts.pop().toLowerCase() : '';
     var isBinary = fileExt !== '' && BINARY_EXTS[fileExt] === 1;
@@ -653,23 +377,38 @@ async function openFile(entry) {
 }
 
 function renderCode(text, path) {
-  var ext = (path.split('.').pop() || '').toLowerCase();
-  var langMap = { js:'javascript', jsx:'javascript', ts:'typescript', tsx:'typescript', py:'python', rs:'rust', go:'go', html:'html', css:'css', json:'json', yaml:'yaml', yml:'yaml', md:'markup', sh:'bash', bash:'bash' };
-  var lang = langMap[ext];
-  var grammar = lang && Prism.languages[lang];
+  var name = path.split('/').pop().toLowerCase();
+  var ext = name.includes('.') ? name.split('.').pop() : '';
+
+  // Special extensionless filenames
+  var nameMap = { dockerfile:'dockerfile', makefile:'bash' };
+  var lang = nameMap[name] || EXT_LANG[ext] || null;
 
   var lines = text.split('\n');
-  // If last line is empty (trailing newline), remove to avoid phantom line.
-  if (lines[lines.length - 1] === '') { lines.pop(); }
-
+  if (lines[lines.length - 1] === '') lines.pop();
   var lineNums = lines.map(function(_, i) { return i + 1; }).join('\n');
-  var highlighted = grammar ? Prism.highlight(text, grammar, lang) : escHtml(text);
+
+  var highlighted;
+  if (lang && hljs.getLanguage(lang)) {
+    try {
+      highlighted = hljs.highlight(text, { language: lang, ignoreIllegals: true }).value;
+    } catch(e) {
+      highlighted = escHtml(text);
+    }
+  } else {
+    // Let hljs auto-detect, fall back to plain text
+    try {
+      highlighted = hljs.highlightAuto(text).value;
+    } catch(e) {
+      highlighted = escHtml(text);
+    }
+  }
 
   var body = $('viewer-body');
   body.innerHTML =
     '<div id="code-wrap">' +
       '<div id="line-nums">' + lineNums + '</div>' +
-      '<div id="code-content">' + highlighted + '</div>' +
+      '<div id="code-content"><pre><code class="hljs">' + highlighted + '</code></pre></div>' +
     '</div>';
 }
 
@@ -698,11 +437,10 @@ async function openCommits() {
 }
 
 $('commits-close').addEventListener('click', function() { $('commits-overlay').classList.remove('show'); });
-$('commits-overlay').addEventListener('click', function(e) { if (e.target === this) { this.classList.remove('show'); } });
-
+$('commits-overlay').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
 $('search-input').addEventListener('input', function() {
   state.filterText = this.value;
-  if (state.tree) { renderTree(state.tree); }
+  if (state.tree) renderTree(state.tree);
 });
 
 boot().catch(function(e) { showToast('Boot error: ' + e.message); });
