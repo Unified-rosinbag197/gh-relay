@@ -60,6 +60,7 @@ func (t *cloudflareTunnel) waitForURL(timeout time.Duration) (string, error) {
 		scanner := bufio.NewScanner(t.stderr)
 		for scanner.Scan() {
 			line := scanner.Text()
+			fmt.Println("[cloudflared]", line)
 			if match := cfURLPattern.FindString(line); match != "" {
 				urlCh <- match
 				return

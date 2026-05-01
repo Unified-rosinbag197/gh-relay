@@ -59,6 +59,7 @@ func waitForNgrokURL(r io.Reader, timeout time.Duration) (string, error) {
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
 			line := scanner.Text()
+			fmt.Println("[ngrok]", line)
 			if strings.Contains(line, "ngrok") {
 				if match := ngrokURLPattern.FindString(line); match != "" {
 					urlCh <- match
