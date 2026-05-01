@@ -64,8 +64,6 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/blob", s.requireToken(s.handleBlob))
 	s.mux.HandleFunc("/api/commits", s.requireToken(s.handleCommits))
 
-	// Serve the SPA for everything else — no auth needed.
-	// The session token is embedded directly in the HTML at serve time.
 	s.mux.HandleFunc("/", s.handleSPA)
 }
 

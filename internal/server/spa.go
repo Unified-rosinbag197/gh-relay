@@ -175,7 +175,7 @@ function api(path) {
     headers: { 'X-Relay-Token': __RELAY_TOKEN__ }
   }).then(function(r) {
     if (r.status === 401) {
-      document.body.innerHTML = '<div style="padding:40px;font-family:sans-serif;color:#f85149">Session expired — please reload the page.</div>';
+      document.body.innerHTML = '<div style="padding:40px;font-family:sans-serif;color:#f85149">Session expired, please reload the page.</div>';
       return new Promise(function() {});
     }
     if (!r.ok) throw new Error('HTTP ' + r.status + ' from ' + path);
@@ -364,7 +364,7 @@ async function openFile(entry) {
       if (ct.startsWith('image/')) {
         body.innerHTML = '<div style="padding:24px;text-align:center"><img src="' + url + '" style="max-width:100%;max-height:70vh;border-radius:6px"></div>';
       } else {
-        body.innerHTML = '<div style="padding:24px">Binary file — <a href="' + url + '" download="' + entry.path.split('/').pop() + '" style="color:var(--accent)">Download</a></div>';
+        body.innerHTML = '<div style="padding:24px">Binary file, <a href="' + url + '" download="' + entry.path.split('/').pop() + '" style="color:var(--accent)">Download</a></div>';
       }
     } else {
       var text = await resp.text();

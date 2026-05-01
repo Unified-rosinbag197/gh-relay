@@ -1,17 +1,17 @@
 # gh-relay
 
-> Share a private GitHub repo with anyone — no collaborator invite, no paid seat, no cleanup.
+> Share a private GitHub repo with anyone, no collaborator invite, no paid seat, no cleanup.
 
-[![CI](https://github.com/yourname/gh-relay/actions/workflows/ci.yml/badge.svg)](https://github.com/yourname/gh-relay/actions/workflows/ci.yml)
-[![Release](https://github.com/yourname/gh-relay/actions/workflows/release.yml/badge.svg)](https://github.com/yourname/gh-relay/actions/workflows/release.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/yourname/gh-relay)](https://goreportcard.com/report/github.com/yourname/gh-relay)
+[![CI](https://github.com/soub4i/gh-relay/actions/workflows/ci.yml/badge.svg)](https://github.com/soub4i/gh-relay/actions/workflows/ci.yml)
+[![Release](https://github.com/soub4i/gh-relay/actions/workflows/release.yml/badge.svg)](https://github.com/soub4i/gh-relay/actions/workflows/release.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/soub4i/gh-relay)](https://goreportcard.com/report/github.com/soub4i/gh-relay)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-Adding a contractor or auditor as a GitHub collaborator means IT tickets, legal paperwork, a paid seat, and a permission that lingers long after the review is done. Most teams end up emailing zip files or screensharing instead — both worse.
+Adding a contractor or auditor as a GitHub collaborator means IT tickets, legal paperwork, a paid seat, and a permission that lingers long after the review is done. Most teams end up emailing zip files or screensharing instead, both worse.
 
-**gh-relay** fixes this in one command. Run it on your machine, share a temporary URL, and your guest gets a read-only browser view of the codebase. When you press `Ctrl+C`, the link is dead — zero cleanup, zero lingering access.
+**gh-relay** fixes this in one command. Run it on your machine, share a temporary URL, and your guest gets a read-only browser view of the codebase. When you press `Ctrl+C`, the link is dead, zero cleanup, zero lingering access.
 
 ```
 $ gh-relay share --token ghp_... --repo my-org/private-app --expire 1h
@@ -42,7 +42,7 @@ $ gh-relay share --token ghp_... --repo my-org/private-app --expire 1h
 1. **You run** `gh-relay share` with your GitHub token and repo name.
 2. **A local proxy** starts on your machine and fetches files from the GitHub API using your token.
 3. **A secure tunnel** (Cloudflare or ngrok) exposes the proxy via a temporary public URL.
-4. **Your guest opens the URL** and gets a read-only file browser — no GitHub account required.
+4. **Your guest opens the URL** and gets a read-only file browser, no GitHub account required.
 5. **You press `Ctrl+C`** (or `--expire` elapses) and the tunnel closes instantly. The URL is dead.
 
 Your token never leaves your machine. The guest can't push, clone, or access anything you didn't share.
@@ -54,28 +54,28 @@ Your token never leaves your machine. The guest can't push, clone, or access any
 ### Homebrew *(coming soon)*
 
 ```bash
-brew install yourname/tap/gh-relay
+brew install soub4i/tap/gh-relay
 ```
 
 ### Download a binary
 
-Grab the latest release for your platform from the [Releases page](https://github.com/yourname/gh-relay/releases).
+Grab the latest release for your platform from the [Releases page](https://github.com/soub4i/gh-relay/releases).
 
 ```bash
 # macOS (Apple Silicon)
-curl -L https://github.com/yourname/gh-relay/releases/latest/download/gh-relay_darwin_arm64.tar.gz | tar xz
+curl -L https://github.com/soub4i/gh-relay/releases/latest/download/gh-relay_darwin_arm64.tar.gz | tar xz
 sudo mv gh-relay /usr/local/bin/
 
 # macOS (Intel)
-curl -L https://github.com/yourname/gh-relay/releases/latest/download/gh-relay_darwin_amd64.tar.gz | tar xz
+curl -L https://github.com/soub4i/gh-relay/releases/latest/download/gh-relay_darwin_amd64.tar.gz | tar xz
 sudo mv gh-relay /usr/local/bin/
 
 # Linux (amd64)
-curl -L https://github.com/yourname/gh-relay/releases/latest/download/gh-relay_linux_amd64.tar.gz | tar xz
+curl -L https://github.com/soub4i/gh-relay/releases/latest/download/gh-relay_linux_amd64.tar.gz | tar xz
 sudo mv gh-relay /usr/local/bin/
 
-# Windows (amd64) — run in PowerShell
-Invoke-WebRequest -Uri https://github.com/yourname/gh-relay/releases/latest/download/gh-relay_windows_amd64.zip -OutFile gh-relay.zip
+# Windows (amd64) - run in PowerShell
+Invoke-WebRequest -Uri https://github.com/soub4i/gh-relay/releases/latest/download/gh-relay_windows_amd64.zip -OutFile gh-relay.zip
 Expand-Archive gh-relay.zip
 ```
 
@@ -84,7 +84,7 @@ Expand-Archive gh-relay.zip
 Requires **Go 1.22+**.
 
 ```bash
-git clone https://github.com/yourname/gh-relay
+git clone https://github.com/soub4i/gh-relay
 cd gh-relay
 go build -o gh-relay .
 sudo mv gh-relay /usr/local/bin/
@@ -96,7 +96,7 @@ You need at least one tunnel provider installed:
 
 | Provider | Install |
 |---|---|
-| **Cloudflare** *(recommended — free, no account needed)* | [developers.cloudflare.com → Downloads](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) |
+| **Cloudflare** *(recommended, free, no account needed)* | [developers.cloudflare.com → Downloads](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) |
 | **ngrok** | [ngrok.com/download](https://ngrok.com/download) |
 
 ---
@@ -138,7 +138,7 @@ gh-relay share \
   --tunnel ngrok
 ```
 
-### Local only (no tunnel — useful for testing)
+### Local only (no tunnel, useful for testing)
 
 ```bash
 gh-relay share \
@@ -146,7 +146,7 @@ gh-relay share \
   --repo my-org/private-app \
   --tunnel none \
   --port 8080
-# Open http://localhost:8080/auth/login in your browser
+# Open http://localhost:8080 in your browser
 ```
 
 ### All flags
@@ -168,12 +168,13 @@ gh-relay is designed from the ground up to share as little as possible.
 
 | Property | How it's enforced |
 |---|---|
-| **Token never leaves your machine** | All GitHub API calls are made server-side. The guest only receives a short-lived session cookie. |
+| **Token never leaves your machine** | All GitHub API calls are made server-side. The guest only receives a short-lived session . |
 | **Read-only by design** | The proxy only registers `GET` handlers. `POST`, `PATCH`, `DELETE` return `405` before any session check. |
 | **Nothing written to disk** | Files are fetched on demand and streamed directly to the guest. No `git clone`, no temp files. |
 | **Instant teardown** | `Ctrl+C` or `--expire` kills the tunnel, shuts the server, and invalidates all session cookies simultaneously. |
 | **No external dependencies in the browser** | The file browser SPA is fully self-contained. No third-party scripts, no CDN calls from the guest's browser. |
-| **Input validation** | SHA parameters are validated as 40-char hex strings. Branch names are checked against a safe character allowlist before any GitHub API call is made. |
+| **Zero trust** | The guest can only see what you share. They can't navigate to other repos, access your GitHub account, or do anything outside the API calls you allow. |
+| **No dependencies on third-party services** | The core functionality relies only on GitHub and your chosen tunnel provider. No analytics, no databases, no external APIs. |
 
 ### GitHub token scopes
 
@@ -182,8 +183,8 @@ For **fine-grained PATs** (recommended):
 - `Metadata: Read-only`
 
 For **classic PATs**:
-- `repo` — for private repositories
-- `public_repo` — for public repositories only
+- `repo` | for private repositories
+- `public_repo` | for public repositories only
 
 > **Tip:** Create a dedicated PAT for gh-relay sessions with the minimum required scopes and a short expiry matching your longest expected review session.
 
@@ -191,7 +192,7 @@ For **classic PATs**:
 
 ## Guest experience
 
-The guest opens the URL in any browser — no GitHub account, no sign-in, no extension required. They see:
+The guest opens the URL in any browser, no GitHub account, no sign-in, no extension required. They see:
 
 - A **file tree** with folder expand/collapse and a live filter
 - A **syntax-highlighted code viewer** for all common languages (Go, Python, Rust, TypeScript, JS, YAML, JSON, and more)
@@ -205,24 +206,38 @@ They cannot clone, push, download a zip, or navigate outside the repository you 
 ## Project layout
 
 ```
-gh-relay/
-├── main.go                      Entry point
-├── cmd/
-│   ├── root.go                  CLI argument parsing (stdlib flag)
-│   └── share.go                 Session orchestration
-└── internal/
-    ├── github/
-    │   └── client.go            Read-only GitHub REST API client
-    ├── server/
-    │   ├── server.go            HTTP proxy + route handlers
-    │   └── spa.go               Embedded single-page file browser
-    ├── session/
-    │   └── manager.go           In-memory session token manager
-    └── tunnel/
-        └── tunnel.go            Cloudflare / ngrok / noop adapters
+├── cmd
+│   ├── root.go
+│   └── share.go // CLI command definitions and flag parsing
+├── go.mod
+├── internal
+│   ├── github
+│   │   ├── client.go // GitHub API client and handlers
+│   │   ├── types.go
+│   │   └── utils.go
+│   ├── logo
+│   │   └── logo.go
+│   ├── server
+│   │   ├── server.go // HTTP server and handlers
+│   │   ├── spa.go
+│   │   ├── types.go
+│   │   └── utils.go
+│   ├── session
+│   │   ├── manager.go 
+│   │   ├── types.go
+│   │   └── utils.go
+│   ├── tunnel
+│   │   ├── cf.go // Cloudflare tunnel support
+│   │   ├── ngrok.go // ngrok tunnel support
+│   │   └── tunnel.go // Tunnel interface and factory
+│   └── version
+│       └── version.go
+├── LICENSE
+├── main.go
+└── README.md
 ```
 
-Zero external Go dependencies — stdlib only.
+Zero external Go dependencies.
 
 ---
 
@@ -248,19 +263,19 @@ go build -o gh-relay .
 
 ## Roadmap
 
-- **v1.0** — File browsing, syntax highlighting, Cloudflare tunnel ✓
-- **v1.1** — Branch switcher, commit history ✓
-- **v1.2** — Markdown rendering for README files
-- **v1.3** — System keychain integration for token storage
-- **v1.4** — Optional one-time password protection for the shared URL
-- **v1.5** — `gh` CLI extension (`gh relay share ...`)
+- [x] File browsing, syntax highlighting, Cloudflare tunnel
+- [x] Branch switcher, commit history
+- [] Markdown rendering for README files
+- [ ] System keychain integration for token storage
+- [ ] Optional one-time password protection for the shared URL
+- [ ] `gh` CLI extension (`gh relay share ...`)
 
 ---
 
 ## License
 
-[MIT](LICENSE) — © 2025 yourname
+[MIT](LICENSE) -  © 2025 soub4i
 
 ---
 
-> gh-relay is intended for internal collaboration and peer review. Always ensure that sharing code via a relay complies with your organisation's data-handling policies and Terms of Service.
+> gh-relay is intended for internal collaboration and peer review. Always ensure that sharing code via a relay complies with your organisation's data-handling policies and Terms of Service

@@ -49,7 +49,7 @@ func Execute() error {
 		fmt.Fprintln(os.Stderr, rootCmd.long)
 		return nil
 	default:
-		return fmt.Errorf("unknown command %q — run \"gh-relay --help\"", os.Args[1])
+		return fmt.Errorf("unknown command %q - run \"gh-relay --help\"", os.Args[1])
 	}
 }
 

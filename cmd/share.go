@@ -57,7 +57,7 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 	logger.Print("  Fetching branch list…")
 	branches, err := gh.GetBranches(ctx, owner, repo)
 	if err != nil {
-		logger.Printf(" Could not fetch branches: %v — proceeding with %q only", err, branch)
+		logger.Printf(" Could not fetch branches: %v - proceeding with %q only", err, branch)
 		branches = []string{branch}
 	} else {
 		logger.Printf("Found %d branch(es)", len(branches))
@@ -98,7 +98,7 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 
 	select {
 	case <-ctx.Done():
-		logger.Println("\nSession ended — tunnel closed, server shut down.")
+		logger.Println("\nSession ended, tunnel closed, server shut down.")
 		logger.Println("The shared URL is now inactive. All session cookies are invalid.")
 	case err := <-serverErr:
 		return fmt.Errorf("server error: %w", err)
