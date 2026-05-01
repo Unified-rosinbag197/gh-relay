@@ -69,3 +69,16 @@ func blobContentType(path string) string {
 		return "text/plain; charset=utf-8"
 	}
 }
+
+func getClientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if i := strings.Index(xff, ","); i != -1 {
+			return strings.TrimSpace(xff[:i])
+		}
+		return xff
+	}
+	if ip := r.Header.Get("CF-Connecting-IP"); ip != "" {
+		return ip
+	}
+	return r.RemoteAddr
+}
