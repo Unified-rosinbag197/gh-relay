@@ -17,6 +17,7 @@ type Config struct {
 	GitHub   *github.Client
 	Sessions *session.Manager
 	Port     int
+	Tree     *github.Tree
 }
 
 // Server is the gh-relay HTTP server.

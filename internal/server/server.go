@@ -119,6 +119,11 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if branch == s.cfg.Branch && s.cfg.Tree != nil {
+		writeJSON(w, s.cfg.Tree)
+		return
+	}
+
 	tree, err := s.cfg.GitHub.GetTree(r.Context(), s.cfg.Owner, s.cfg.Repo, branch)
 	if err != nil {
 		log.Printf("[error] GetTree(%s): %v", branch, err)
