@@ -148,6 +148,28 @@ gh-relay share \
 # Open http://localhost:8080 in your browser
 ```
 
+### Enable audit logging
+
+```bash
+gh-relay share \
+  --token ghp_... \
+  --repo my-org/private-app \
+  --audit
+```
+
+Logs guest activity to the terminal and prints a summary on exit:
+
+```
+[audit] Guest viewed: src/main.go (from 105.190.183.127)
+[audit] GET /api/commits (from 105.190.183.127)
+
+  SESSION AUDIT SUMMARY
+  Files viewed  : 5 (3 unique)
+  Total requests: 12
+  Unique IPs    : 1
+  Duration      : 4m32s
+```
+
 ### All flags
 
 | Flag | Default | Description |
@@ -158,6 +180,7 @@ gh-relay share \
 | `--port` | `8080` | Local port for the proxy server |
 | `--expire` | unlimited | Auto-close after this duration (`30m`, `1h`, `2h30m`) |
 | `--tunnel` | `cloudflare` | Tunnel provider: `cloudflare`, `ngrok`, or `none` |
+| `--audit` | `false` | Log guest activity and print a session summary on exit |
 
 ---
 
