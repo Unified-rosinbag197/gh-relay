@@ -70,6 +70,7 @@ func runShare(args []string) error {
 	fs.IntVar(&f.port, "port", 8080, "Local port for the proxy server")
 	fs.DurationVar(&f.expire, "expire", 0, "Session duration, e.g. 30m or 1h (default: unlimited)")
 	fs.StringVar(&f.tunnel, "tunnel", "cloudflare", "Tunnel provider: cloudflare, ngrok, or none")
+	fs.BoolVar(&f.audit, "audit", false, "Log guest activity and print a session summary on exit")
 
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, `Usage: gh-relay share [flags]
