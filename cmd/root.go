@@ -93,7 +93,7 @@ Flags:`)
 Examples:
   gh-relay share --token ghp_abc123 --repo my-org/private-app --expire 1h
   gh-relay share --token ghp_abc123 --repo my-org/private-app --tunnel ngrok --port 9000
-  gh-relay share --token ghp_abc123 --repo my-org/private-app --allow "src/**,docs/**" --deny ".env,secrets/**"
+  gh-relay share --token ghp_abc123 --repo my-org/private-app --allow "src/**,docs/**" --deny ".env,.env.*,secrets/**"
   gh-relay share --token ghp_abc123 --repo my-org/private-app --scan-content
   gh-relay share --token ghp_abc123 --repo my-org/private-app --fail-on-secrets
   gh-relay share --token ghp_abc123 --repo my-org/private-app --no-scan-secrets --tunnel none`)

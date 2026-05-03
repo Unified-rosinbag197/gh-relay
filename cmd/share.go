@@ -34,6 +34,11 @@ type shareFlags struct {
 	audit         bool
 }
 
+type secretScanGitHub interface {
+	GetTree(ctx context.Context, owner, repo, ref string) (*github.Tree, error)
+	GetBlob(ctx context.Context, owner, repo, sha string) ([]byte, error)
+}
+
 func RunShareSession(ctx context.Context, f shareFlags) error {
 	logger := log.New(os.Stderr, "", 0)
 	pathPolicy, err := filter.NewPolicy(f.allow, f.deny)
@@ -81,7 +86,7 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 		return fmt.Errorf("branch %q not found in %s/%s", branch, owner, repo)
 	}
 
-	initialTree, err := runSecretPreflight(ctx, logger, gh, owner, repo, branch, f)
+	initialTree, err := runSecretPreflight(ctx, logger, gh, owner, repo, branch, f, pathPolicy)
 	if err != nil {
 		return err
 	}
@@ -136,7 +141,7 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 	return nil
 }
 
-func runSecretPreflight(ctx context.Context, logger *log.Logger, gh *github.Client, owner, repo, branch string, f shareFlags) (*github.Tree, error) {
+func runSecretPreflight(ctx context.Context, logger *log.Logger, gh secretScanGitHub, owner, repo, branch string, f shareFlags, pathPolicy *filter.Policy) (*github.Tree, error) {
 	if !f.scanSecrets {
 		return nil, nil
 	}
@@ -149,13 +154,14 @@ func runSecretPreflight(ctx context.Context, logger *log.Logger, gh *github.Clie
 	if tree.Truncated {
 		logger.Print("  GitHub returned a truncated tree; the secret-risk scan may be incomplete.")
 	}
+	scanTree := filter.FilterTree(tree, pathPolicy)
 
 	scanner := secretscan.New(secretscan.Options{ScanContent: f.scanContent})
-	findings := scanner.ScanEntries(secretScanEntries(tree.Tree))
+	findings := scanner.ScanEntries(secretScanEntries(scanTree.Tree))
 
 	if f.scanContent {
 		logger.Print("  Scanning small text blobs for secret patterns…")
-		contentFindings, skipped, err := scanSecretContent(ctx, scanner, gh, owner, repo, tree)
+		contentFindings, skipped, err := scanSecretContent(ctx, scanner, gh, owner, repo, scanTree)
 		if err != nil {
 			return tree, err
 		}
@@ -189,7 +195,7 @@ func secretScanEntries(entries []github.TreeEntry) []secretscan.Entry {
 	return out
 }
 
-func scanSecretContent(ctx context.Context, scanner *secretscan.Scanner, gh *github.Client, owner, repo string, tree *github.Tree) ([]secretscan.Finding, int, error) {
+func scanSecretContent(ctx context.Context, scanner *secretscan.Scanner, gh secretScanGitHub, owner, repo string, tree *github.Tree) ([]secretscan.Finding, int, error) {
 	var findings []secretscan.Finding
 	skipped := 0
 

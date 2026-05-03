@@ -2,8 +2,8 @@ package server
 
 import (
 	"context"
-	"path"
 
+	"github.ibm.com/soub4i/gh-relay/internal/filter"
 	"github.ibm.com/soub4i/gh-relay/internal/github"
 )
 
@@ -19,29 +19,7 @@ func (s *Server) treeForBranch(ctx context.Context, branch string) (*github.Tree
 }
 
 func (s *Server) filteredTree(tree *github.Tree) *github.Tree {
-	if !s.pathFilterEnabled() || tree == nil {
-		return tree
-	}
-
-	visiblePaths := make(map[string]struct{}, len(tree.Tree))
-	for _, entry := range tree.Tree {
-		if !s.cfg.PathFilter.AllowPath(entry.Path) {
-			continue
-		}
-		visiblePaths[entry.Path] = struct{}{}
-		for dir := path.Dir(entry.Path); dir != "." && dir != "/"; dir = path.Dir(dir) {
-			visiblePaths[dir] = struct{}{}
-		}
-	}
-
-	filtered := *tree
-	filtered.Tree = make([]github.TreeEntry, 0, len(tree.Tree))
-	for _, entry := range tree.Tree {
-		if _, ok := visiblePaths[entry.Path]; ok {
-			filtered.Tree = append(filtered.Tree, entry)
-		}
-	}
-	return &filtered
+	return filter.FilterTree(tree, s.cfg.PathFilter)
 }
 
 func treeHasBlob(tree *github.Tree, repoPath, sha string) bool {
