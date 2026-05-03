@@ -17,6 +17,7 @@ type Config struct {
 	GitHub        *github.Client
 	Sessions      *session.Manager
 	Port          int
+	Tree          *github.Tree
 	AuditLog      *AuditLog
 	AllowDownload bool
 }

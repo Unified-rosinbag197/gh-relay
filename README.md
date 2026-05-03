@@ -148,6 +148,61 @@ gh-relay share \
 # Open http://localhost:8080 in your browser
 ```
 
+### Pre-share secret warnings
+
+Before a share session starts, gh-relay scans the selected branch's repository tree for sensitive-looking paths such as `.env`, `.env.*`, `*.pem`, `*.key`, `id_rsa`, `id_ed25519`, `secrets/`, `credentials.yml`, `config/credentials.yml`, `*.p12`, `*.pfx`, `kubeconfig`, `.npmrc`, `.pypirc`, and `terraform.tfvars`.
+
+Path scanning is enabled by default:
+
+```bash
+gh-relay share \
+  --token ghp_... \
+  --repo my-org/private-app
+```
+
+You can also scan small text files for common high-risk patterns such as AWS access key IDs, GitHub token prefixes, private key headers, and simple assignments like `password=`, `secret=`, `api_key=`, or `token=`:
+
+```bash
+gh-relay share \
+  --token ghp_... \
+  --repo my-org/private-app \
+  --scan-content
+```
+
+If findings are detected, gh-relay prints only the file path, finding type, severity, and rule name. It never prints matched secret values.
+
+```text
+⚠️  Potential sensitive files or secrets detected before sharing:
+
+HIGH    path     .env                         matched rule: dotenv file
+HIGH    path     deploy/prod.pem              matched rule: private key/certificate file
+MEDIUM  content  config/settings.yml          matched rule: generic token assignment
+
+gh-relay does not print secret values. Review these files before exposing this repo.
+
+Continue sharing? [y/N]:
+```
+
+In non-interactive mode, gh-relay prints the warning and continues unless `--fail-on-secrets` is set:
+
+```bash
+gh-relay share \
+  --token ghp_... \
+  --repo my-org/private-app \
+  --fail-on-secrets
+```
+
+To skip this preflight scan:
+
+```bash
+gh-relay share \
+  --token ghp_... \
+  --repo my-org/private-app \
+  --no-scan-secrets
+```
+
+This is a best-effort warning system, not a full security scanner. It does not scan Git history, all branches, generated artifacts outside the selected tree, large blobs, binary files, encrypted files, or every possible secret format. Review sensitive repositories before exposing them.
+
 ### Enable audit logging
 
 ```bash
@@ -191,6 +246,10 @@ A "Download ZIP" button appears in the guest's browser. The ZIP is streamed dire
 | `--port` | `8080` | Local port for the proxy server |
 | `--expire` | unlimited | Auto-close after this duration (`30m`, `1h`, `2h30m`) |
 | `--tunnel` | `cloudflare` | Tunnel provider: `cloudflare`, `ngrok`, or `none` |
+| `--scan-secrets` | `true` | Scan repository paths for sensitive files before sharing |
+| `--no-scan-secrets` | `false` | Disable pre-share sensitive file scanning |
+| `--scan-content` | `false` | Also scan small text blobs for common secret patterns |
+| `--fail-on-secrets` | `false` | Exit non-zero if the pre-share scan finds potential secrets |
 | `--audit` | `false` | Log guest activity and print a session summary on exit |
 | `--allow-download` | `false` | Allow guests to download the repository as a ZIP archive |
 
@@ -204,6 +263,7 @@ gh-relay is designed from the ground up to share as little as possible.
 |---|---|
 | **Token never leaves your machine** | All GitHub API calls are made server-side. The guest only receives a short-lived session . |
 | **Read-only by design** | The proxy only registers `GET` handlers. `POST`, `PATCH`, `DELETE` return `405` before any session check. |
+| **Pre-share secret warning** | Before opening the tunnel, gh-relay scans the selected tree for suspicious paths and can optionally scan small text blobs. Findings are sanitized and never include matched secret values. |
 | **Nothing written to disk** | Files are fetched on demand and streamed directly to the guest. No `git clone`, no temp files. |
 | **Instant teardown** | `Ctrl+C` or `--expire` kills the tunnel, shuts the server, and invalidates all session cookies simultaneously. |
 | **No external dependencies in the browser** | The file browser SPA is fully self-contained. No third-party scripts, no CDN calls from the guest's browser. |
@@ -256,6 +316,10 @@ They cannot clone, push, download a zip, or navigate outside the repository you 
 │   │   ├── spa.go
 │   │   ├── types.go
 │   │   └── utils.go
+│   ├── secretscan
+│   │   ├── scanner.go // Pre-share path and content secret-risk scanner
+│   │   ├── scanner_test.go
+│   │   └── types.go
 │   ├── session
 │   │   ├── manager.go 
 │   │   ├── types.go

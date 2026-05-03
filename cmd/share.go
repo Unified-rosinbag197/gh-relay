@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -10,18 +11,23 @@ import (
 
 	"github.ibm.com/soub4i/gh-relay/internal/github"
 	"github.ibm.com/soub4i/gh-relay/internal/logo"
+	"github.ibm.com/soub4i/gh-relay/internal/secretscan"
 	"github.ibm.com/soub4i/gh-relay/internal/server"
 	"github.ibm.com/soub4i/gh-relay/internal/session"
 	"github.ibm.com/soub4i/gh-relay/internal/tunnel"
 )
 
 type shareFlags struct {
-	token         string
-	repo          string
-	branch        string
-	port          int
-	expire        time.Duration
-	tunnel        string
+	token  string
+	repo   string
+	branch string
+	port   int
+	expire time.Duration
+	tunnel string
+
+	scanSecrets   bool
+	scanContent   bool
+	failOnSecrets bool
 	audit         bool
 	allowDownload bool
 }
@@ -69,6 +75,11 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 		return fmt.Errorf("branch %q not found in %s/%s", branch, owner, repo)
 	}
 
+	initialTree, err := runSecretPreflight(ctx, logger, gh, owner, repo, branch, f)
+	if err != nil {
+		return err
+	}
+
 	done := ctx.Done()
 	sessionTTL := 24 * time.Hour
 	if f.expire > 0 {
@@ -89,6 +100,7 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 		GitHub:        gh,
 		Sessions:      sessions,
 		Port:          f.port,
+		Tree:          initialTree,
 		AuditLog:      auditLog,
 		AllowDownload: f.allowDownload,
 	}
@@ -116,6 +128,136 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 	}
 
 	return nil
+}
+
+func runSecretPreflight(ctx context.Context, logger *log.Logger, gh *github.Client, owner, repo, branch string, f shareFlags) (*github.Tree, error) {
+	if !f.scanSecrets {
+		return nil, nil
+	}
+
+	logger.Print("  Scanning repository tree for sensitive paths…")
+	tree, err := gh.GetTree(ctx, owner, repo, branch)
+	if err != nil {
+		return nil, fmt.Errorf("secret scan could not fetch repository tree: %w", err)
+	}
+	if tree.Truncated {
+		logger.Print("  GitHub returned a truncated tree; the secret-risk scan may be incomplete.")
+	}
+
+	scanner := secretscan.New(secretscan.Options{ScanContent: f.scanContent})
+	findings := scanner.ScanEntries(secretScanEntries(tree.Tree))
+
+	if f.scanContent {
+		logger.Print("  Scanning small text blobs for secret patterns…")
+		contentFindings, skipped, err := scanSecretContent(ctx, scanner, gh, owner, repo, tree)
+		if err != nil {
+			return tree, err
+		}
+		findings = append(findings, contentFindings...)
+		if skipped > 0 {
+			logger.Printf("  Secret content scan skipped %d file(s) that could not be fetched.", skipped)
+		}
+	}
+
+	secretscan.SortFindings(findings)
+	if len(findings) == 0 {
+		logger.Print("  No potential sensitive files or secrets detected.")
+		return tree, nil
+	}
+
+	if err := handleSecretFindings(logger, findings, f); err != nil {
+		return tree, err
+	}
+	return tree, nil
+}
+
+func secretScanEntries(entries []github.TreeEntry) []secretscan.Entry {
+	out := make([]secretscan.Entry, 0, len(entries))
+	for _, entry := range entries {
+		out = append(out, secretscan.Entry{
+			Path: entry.Path,
+			Type: entry.Type,
+			Size: entry.Size,
+		})
+	}
+	return out
+}
+
+func scanSecretContent(ctx context.Context, scanner *secretscan.Scanner, gh *github.Client, owner, repo string, tree *github.Tree) ([]secretscan.Finding, int, error) {
+	var findings []secretscan.Finding
+	skipped := 0
+
+	for _, entry := range tree.Tree {
+		if entry.Type != "blob" || entry.SHA == "" || !scanner.ShouldScanContent(entry.Path, entry.Size) {
+			continue
+		}
+
+		data, err := gh.GetBlob(ctx, owner, repo, entry.SHA)
+		if err != nil {
+			if ctx.Err() != nil {
+				return nil, skipped, ctx.Err()
+			}
+			skipped++
+			continue
+		}
+
+		findings = append(findings, scanner.ScanContent(entry.Path, data)...)
+	}
+
+	return findings, skipped, nil
+}
+
+func handleSecretFindings(logger *log.Logger, findings []secretscan.Finding, f shareFlags) error {
+	printSecretFindings(logger, findings)
+
+	if f.failOnSecrets {
+		return fmt.Errorf("secret-risk scan found %d finding(s); sharing stopped by --fail-on-secrets", len(findings))
+	}
+
+	if !stdinIsTerminal() {
+		logger.Print("Non-interactive input detected; continuing without confirmation. Use --fail-on-secrets to stop on findings.")
+		return nil
+	}
+
+	ok, err := promptContinue()
+	if err != nil {
+		return fmt.Errorf("reading confirmation: %w", err)
+	}
+	if !ok {
+		return fmt.Errorf("sharing canceled after secret-risk warning")
+	}
+	return nil
+}
+
+func printSecretFindings(logger *log.Logger, findings []secretscan.Finding) {
+	logger.Println()
+	logger.Println("⚠️  Potential sensitive files or secrets detected before sharing:")
+	logger.Println()
+	for _, finding := range findings {
+		logger.Printf("%-7s %-8s %-28s matched rule: %s", finding.Severity, finding.Type, finding.Path, finding.Rule)
+	}
+	logger.Println()
+	logger.Println("gh-relay does not print secret values. Review these files before exposing this repo.")
+	logger.Println()
+}
+
+func stdinIsTerminal() bool {
+	info, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return info.Mode()&os.ModeCharDevice != 0
+}
+
+func promptContinue() (bool, error) {
+	fmt.Fprint(os.Stderr, "Continue sharing? [y/N]: ")
+	reader := bufio.NewReader(os.Stdin)
+	answer, err := reader.ReadString('\n')
+	if err != nil && len(answer) == 0 {
+		return false, err
+	}
+	answer = strings.TrimSpace(strings.ToLower(answer))
+	return answer == "y" || answer == "yes", nil
 }
 
 func printBanner(l *log.Logger) {
