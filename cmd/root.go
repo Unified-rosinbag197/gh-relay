@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.ibm.com/soub4i/gh-relay/internal/version"
@@ -70,6 +71,10 @@ func runShare(args []string) error {
 	fs.IntVar(&f.port, "port", 8080, "Local port for the proxy server")
 	fs.DurationVar(&f.expire, "expire", 0, "Session duration, e.g. 30m or 1h (default: unlimited)")
 	fs.StringVar(&f.tunnel, "tunnel", "cloudflare", "Tunnel provider: cloudflare, ngrok, or none")
+	fs.BoolVar(&f.scanSecrets, "scan-secrets", true, "Scan repository paths for sensitive files before sharing")
+	fs.Var(negatedBoolFlag{target: &f.scanSecrets}, "no-scan-secrets", "Disable pre-share sensitive file scanning")
+	fs.BoolVar(&f.scanContent, "scan-content", false, "Also scan small text blobs for common secret patterns")
+	fs.BoolVar(&f.failOnSecrets, "fail-on-secrets", false, "Exit non-zero if the pre-share scan finds potential secrets")
 	fs.BoolVar(&f.audit, "audit", false, "Log guest activity and print a session summary on exit")
 
 	fs.Usage = func() {
@@ -85,7 +90,9 @@ Flags:`)
 Examples:
   gh-relay share --token ghp_abc123 --repo my-org/private-app --expire 1h
   gh-relay share --token ghp_abc123 --repo my-org/private-app --tunnel ngrok --port 9000
-  gh-relay share --token ghp_abc123 --repo my-org/private-app --tunnel none`)
+  gh-relay share --token ghp_abc123 --repo my-org/private-app --scan-content
+  gh-relay share --token ghp_abc123 --repo my-org/private-app --fail-on-secrets
+  gh-relay share --token ghp_abc123 --repo my-org/private-app --no-scan-secrets --tunnel none`)
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -95,7 +102,9 @@ Examples:
 		return err
 	}
 
-	ValidateShareFlags(f)
+	if err := ValidateShareFlags(f); err != nil {
+		return err
+	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
@@ -107,6 +116,32 @@ Examples:
 	}
 
 	return RunShareSession(ctx, f)
+}
+
+type negatedBoolFlag struct {
+	target *bool
+}
+
+func (f negatedBoolFlag) Set(value string) error {
+	disabled, err := strconv.ParseBool(value)
+	if err != nil {
+		return err
+	}
+	if f.target != nil {
+		*f.target = !disabled
+	}
+	return nil
+}
+
+func (f negatedBoolFlag) String() string {
+	if f.target == nil {
+		return "false"
+	}
+	return strconv.FormatBool(!*f.target)
+}
+
+func (f negatedBoolFlag) IsBoolFlag() bool {
+	return true
 }
 
 func runVersion() error {
