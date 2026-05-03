@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.ibm.com/soub4i/gh-relay/internal/filter"
 	"github.ibm.com/soub4i/gh-relay/internal/version"
 )
 
@@ -71,6 +72,8 @@ func runShare(args []string) error {
 	fs.IntVar(&f.port, "port", 8080, "Local port for the proxy server")
 	fs.DurationVar(&f.expire, "expire", 0, "Session duration, e.g. 30m or 1h (default: unlimited)")
 	fs.StringVar(&f.tunnel, "tunnel", "cloudflare", "Tunnel provider: cloudflare, ngrok, or none")
+	fs.StringVar(&f.allow, "allow", "", "Comma-separated repository-relative path patterns to include")
+	fs.StringVar(&f.deny, "deny", "", "Comma-separated repository-relative path patterns to exclude; deny wins over allow")
 	fs.BoolVar(&f.scanSecrets, "scan-secrets", true, "Scan repository paths for sensitive files before sharing")
 	fs.Var(negatedBoolFlag{target: &f.scanSecrets}, "no-scan-secrets", "Disable pre-share sensitive file scanning")
 	fs.BoolVar(&f.scanContent, "scan-content", false, "Also scan small text blobs for common secret patterns")
@@ -90,6 +93,7 @@ Flags:`)
 Examples:
   gh-relay share --token ghp_abc123 --repo my-org/private-app --expire 1h
   gh-relay share --token ghp_abc123 --repo my-org/private-app --tunnel ngrok --port 9000
+  gh-relay share --token ghp_abc123 --repo my-org/private-app --allow "src/**,docs/**" --deny ".env,secrets/**"
   gh-relay share --token ghp_abc123 --repo my-org/private-app --scan-content
   gh-relay share --token ghp_abc123 --repo my-org/private-app --fail-on-secrets
   gh-relay share --token ghp_abc123 --repo my-org/private-app --no-scan-secrets --tunnel none`)
@@ -158,6 +162,9 @@ func ValidateShareFlags(f shareFlags) error {
 	}
 	if f.port < 1 || f.port > 65535 {
 		return fmt.Errorf("--port must be between 1 and 65535")
+	}
+	if _, err := filter.NewPolicy(f.allow, f.deny); err != nil {
+		return err
 	}
 	return nil
 }

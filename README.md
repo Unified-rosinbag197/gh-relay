@@ -128,6 +128,27 @@ gh-relay share \
   --branch feature/new-auth
 ```
 
+### Share only selected paths
+
+Use `--allow` to expose only matching repository paths. Use `--deny` to hide matching paths; deny rules always take precedence over allow rules.
+
+```bash
+gh-relay share \
+  --token ghp_... \
+  --repo my-org/private-app \
+  --allow "src/**,docs/**,README.md"
+```
+
+```bash
+gh-relay share \
+  --token ghp_... \
+  --repo my-org/private-app \
+  --allow "src/**,docs/**,README.md" \
+  --deny ".env,secrets/**,*.pem"
+```
+
+Filters are enforced server-side for both `/api/tree` listings and `/api/blob` file access, so a guest cannot bypass a hidden path by manually requesting a blob SHA.
+
 ### Use ngrok instead of Cloudflare
 
 ```bash
@@ -235,6 +256,8 @@ Logs guest activity to the terminal and prints a summary on exit:
 | `--port` | `8080` | Local port for the proxy server |
 | `--expire` | unlimited | Auto-close after this duration (`30m`, `1h`, `2h30m`) |
 | `--tunnel` | `cloudflare` | Tunnel provider: `cloudflare`, `ngrok`, or `none` |
+| `--allow` | empty | Comma-separated repository-relative path patterns to include |
+| `--deny` | empty | Comma-separated repository-relative path patterns to exclude; deny rules win |
 | `--scan-secrets` | `true` | Scan repository paths for sensitive files before sharing |
 | `--no-scan-secrets` | `false` | Disable pre-share sensitive file scanning |
 | `--scan-content` | `false` | Also scan small text blobs for common secret patterns |
@@ -251,6 +274,7 @@ gh-relay is designed from the ground up to share as little as possible.
 |---|---|
 | **Token never leaves your machine** | All GitHub API calls are made server-side. The guest only receives a short-lived session . |
 | **Read-only by design** | The proxy only registers `GET` handlers. `POST`, `PATCH`, `DELETE` return `405` before any session check. |
+| **Server-side path filters** | Optional `--allow` and `--deny` rules are applied to tree listings and blob reads. Deny rules take precedence and blob requests must match the allowed path, branch, and SHA. |
 | **Pre-share secret warning** | Before opening the tunnel, gh-relay scans the selected tree for suspicious paths and can optionally scan small text blobs. Findings are sanitized and never include matched secret values. |
 | **Nothing written to disk** | Files are fetched on demand and streamed directly to the guest. No `git clone`, no temp files. |
 | **Instant teardown** | `Ctrl+C` or `--expire` kills the tunnel, shuts the server, and invalidates all session cookies simultaneously. |
@@ -293,6 +317,9 @@ They cannot clone, push, download a zip, or navigate outside the repository you 
 │   └── share.go // CLI command definitions and flag parsing
 ├── go.mod
 ├── internal
+│   ├── filter
+│   │   ├── policy.go // Server-side path allow/deny policy
+│   │   └── policy_test.go
 │   ├── github
 │   │   ├── client.go // GitHub API client and handlers
 │   │   ├── types.go

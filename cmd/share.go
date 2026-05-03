@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.ibm.com/soub4i/gh-relay/internal/filter"
 	"github.ibm.com/soub4i/gh-relay/internal/github"
 	"github.ibm.com/soub4i/gh-relay/internal/logo"
 	"github.ibm.com/soub4i/gh-relay/internal/secretscan"
@@ -24,6 +25,8 @@ type shareFlags struct {
 	port   int
 	expire time.Duration
 	tunnel string
+	allow  string
+	deny   string
 
 	scanSecrets   bool
 	scanContent   bool
@@ -33,6 +36,10 @@ type shareFlags struct {
 
 func RunShareSession(ctx context.Context, f shareFlags) error {
 	logger := log.New(os.Stderr, "", 0)
+	pathPolicy, err := filter.NewPolicy(f.allow, f.deny)
+	if err != nil {
+		return err
+	}
 
 	printBanner(logger)
 
@@ -91,16 +98,17 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 	}
 
 	cfg := server.Config{
-		Owner:    owner,
-		Repo:     repo,
-		Branch:   branch,
-		RepoInfo: repoInfo,
-		Branches: branches,
-		GitHub:   gh,
-		Sessions: sessions,
-		Port:     f.port,
-		Tree:     initialTree,
-		AuditLog: auditLog,
+		Owner:      owner,
+		Repo:       repo,
+		Branch:     branch,
+		RepoInfo:   repoInfo,
+		Branches:   branches,
+		GitHub:     gh,
+		Sessions:   sessions,
+		Port:       f.port,
+		Tree:       initialTree,
+		AuditLog:   auditLog,
+		PathFilter: pathPolicy,
 	}
 	serverErr := startServer(ctx, cfg)
 
@@ -112,7 +120,7 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 	defer tun.Close()
 	logger.Printf("Tunnel active")
 
-	printShareInfo(logger, f, owner, repo, branch, repoInfo, tun.URL())
+	printShareInfo(logger, f, owner, repo, branch, repoInfo, pathPolicy, tun.URL())
 
 	select {
 	case <-ctx.Done():
@@ -266,7 +274,7 @@ func printBanner(l *log.Logger) {
 	l.Println(strings.Repeat("-", 54))
 }
 
-func printShareInfo(l *log.Logger, f shareFlags, owner, repo, branch string, info *github.RepoInfo, url string) {
+func printShareInfo(l *log.Logger, f shareFlags, owner, repo, branch string, info *github.RepoInfo, pathPolicy *filter.Policy, url string) {
 	l.Println()
 	l.Println(strings.Repeat("-", 54))
 	l.Println("  SESSION ACTIVE")
@@ -276,6 +284,16 @@ func printShareInfo(l *log.Logger, f shareFlags, owner, repo, branch string, inf
 	l.Printf("  Visibility : %s", visibilityLabel(info.Private))
 	if info.Description != "" {
 		l.Printf("  Description: %s", info.Description)
+	}
+	if pathPolicy != nil && pathPolicy.Enabled() {
+		l.Println()
+		l.Println("  Path filters:")
+		if len(pathPolicy.Allow) > 0 {
+			l.Printf("    Allow: %s", strings.Join(pathPolicy.Allow, ", "))
+		}
+		if len(pathPolicy.Deny) > 0 {
+			l.Printf("    Deny : %s", strings.Join(pathPolicy.Deny, ", "))
+		}
 	}
 	l.Println()
 	l.Printf("  Share this URL with your guest:")
