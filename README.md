@@ -203,6 +203,28 @@ gh-relay share \
 
 This is a best-effort warning system, not a full security scanner. It does not scan Git history, all branches, generated artifacts outside the selected tree, large blobs, binary files, encrypted files, or every possible secret format. Review sensitive repositories before exposing them.
 
+### Enable audit logging
+
+```bash
+gh-relay share \
+  --token ghp_... \
+  --repo my-org/private-app \
+  --audit
+```
+
+Logs guest activity to the terminal and prints a summary on exit:
+
+```
+[audit] Guest viewed: src/main.go (from 105.190.183.127)
+[audit] GET /api/commits (from 105.190.183.127)
+
+  SESSION AUDIT SUMMARY
+  Files viewed  : 5 (3 unique)
+  Total requests: 12
+  Unique IPs    : 1
+  Duration      : 4m32s
+```
+
 ### All flags
 
 | Flag | Default | Description |
@@ -217,6 +239,7 @@ This is a best-effort warning system, not a full security scanner. It does not s
 | `--no-scan-secrets` | `false` | Disable pre-share sensitive file scanning |
 | `--scan-content` | `false` | Also scan small text blobs for common secret patterns |
 | `--fail-on-secrets` | `false` | Exit non-zero if the pre-share scan finds potential secrets |
+| `--audit` | `false` | Log guest activity and print a session summary on exit |
 
 ---
 

@@ -28,6 +28,7 @@ type shareFlags struct {
 	scanSecrets   bool
 	scanContent   bool
 	failOnSecrets bool
+	audit         bool
 }
 
 func RunShareSession(ctx context.Context, f shareFlags) error {
@@ -84,6 +85,10 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 		sessionTTL = f.expire
 	}
 	sessions := session.NewManager(sessionTTL, done)
+	var auditLog *server.AuditLog
+	if f.audit {
+		auditLog = &server.AuditLog{}
+	}
 
 	cfg := server.Config{
 		Owner:    owner,
@@ -95,6 +100,7 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 		Sessions: sessions,
 		Port:     f.port,
 		Tree:     initialTree,
+		AuditLog: auditLog,
 	}
 	serverErr := startServer(ctx, cfg)
 
@@ -112,6 +118,9 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 	case <-ctx.Done():
 		logger.Println("\nSession ended, tunnel closed, server shut down.")
 		logger.Println("The shared URL is now inactive. All session cookies are invalid.")
+		if auditLog != nil {
+			auditLog.Summary(logger)
+		}
 	case err := <-serverErr:
 		return fmt.Errorf("server error: %w", err)
 	}

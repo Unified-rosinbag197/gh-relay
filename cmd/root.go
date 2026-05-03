@@ -75,6 +75,7 @@ func runShare(args []string) error {
 	fs.Var(negatedBoolFlag{target: &f.scanSecrets}, "no-scan-secrets", "Disable pre-share sensitive file scanning")
 	fs.BoolVar(&f.scanContent, "scan-content", false, "Also scan small text blobs for common secret patterns")
 	fs.BoolVar(&f.failOnSecrets, "fail-on-secrets", false, "Exit non-zero if the pre-share scan finds potential secrets")
+	fs.BoolVar(&f.audit, "audit", false, "Log guest activity and print a session summary on exit")
 
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, `Usage: gh-relay share [flags]

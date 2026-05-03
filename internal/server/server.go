@@ -19,9 +19,13 @@ func New(cfg Config) *Server {
 	s.renderedSPA = rendered
 	s.token = tok
 	s.registerRoutes()
+	var handler http.Handler = s.mux
+	if cfg.AuditLog != nil {
+		handler = s.auditMiddleware(s.mux)
+	}
 	s.srv = &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
-		Handler:      s.mux,
+		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  120 * time.Second,
@@ -82,6 +86,39 @@ func (s *Server) requireToken(next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r)
 	}
+}
+
+func (s *Server) auditMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rec, r)
+
+		if rec.status == http.StatusUnauthorized {
+			return
+		}
+
+		ip := getClientIP(r)
+		filePath := r.URL.Query().Get("path")
+		record := AuditRecord{
+			timestamp: time.Now(),
+			endpoint:  r.URL.Path,
+			filePath:  filePath,
+			branch:    r.URL.Query().Get("branch"),
+			ipAddress: ip,
+		}
+		s.cfg.AuditLog.add(record)
+
+		if filePath != "" {
+			log.Printf("[audit] Guest viewed: %s (from %s)", filePath, ip)
+		} else {
+			log.Printf("[audit] %s %s (from %s)", r.Method, r.URL.Path, ip)
+		}
+	})
 }
 
 // handleInfo returns static repository metadata.
