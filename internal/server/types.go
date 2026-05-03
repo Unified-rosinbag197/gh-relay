@@ -9,15 +9,16 @@ import (
 
 // Config holds everything the server needs to operate.
 type Config struct {
-	Owner    string
-	Repo     string
-	Branch   string
-	RepoInfo *github.RepoInfo
-	Branches []string
-	GitHub   *github.Client
-	Sessions *session.Manager
-	Port     int
-	AuditLog *AuditLog
+	Owner         string
+	Repo          string
+	Branch        string
+	RepoInfo      *github.RepoInfo
+	Branches      []string
+	GitHub        *github.Client
+	Sessions      *session.Manager
+	Port          int
+	AuditLog      *AuditLog
+	AllowDownload bool
 }
 
 // Server is the gh-relay HTTP server.

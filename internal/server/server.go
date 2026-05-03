@@ -5,6 +5,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -15,7 +16,11 @@ import (
 func New(cfg Config) *Server {
 	s := &Server{cfg: cfg, mux: http.NewServeMux()}
 	tok, _ := cfg.Sessions.Issue()
-	rendered := []byte(strings.Replace(spaHTML, "/*__RELAY_TOKEN__*/", `var __RELAY_TOKEN__ = "`+tok+`";`, 1))
+	injected := strings.Replace(spaHTML, "/*__RELAY_TOKEN__*/", `var __RELAY_TOKEN__ = "`+tok+`";`, 1)
+	if cfg.AllowDownload {
+		injected = strings.Replace(injected, "/*__ALLOW_DOWNLOAD__*/", `var __ALLOW_DOWNLOAD__ = true;`, 1)
+	}
+	rendered := []byte(injected)
 	s.renderedSPA = rendered
 	s.token = tok
 	s.registerRoutes()
@@ -67,6 +72,10 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/tree", s.requireToken(s.handleTree))
 	s.mux.HandleFunc("/api/blob", s.requireToken(s.handleBlob))
 	s.mux.HandleFunc("/api/commits", s.requireToken(s.handleCommits))
+
+	if s.cfg.AllowDownload {
+		s.mux.HandleFunc("/api/download", s.requireToken(s.handleDownload))
+	}
 
 	s.mux.HandleFunc("/", s.handleSPA)
 }
@@ -212,6 +221,31 @@ func (s *Server) handleCommits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, commits)
+}
+
+func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
+	branch := r.URL.Query().Get("branch")
+	if branch == "" {
+		branch = s.cfg.Branch
+	}
+	if !isSafeBranchName(branch) {
+		http.Error(w, "invalid branch name", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := s.cfg.GitHub.GetZipball(r.Context(), s.cfg.Owner, s.cfg.Repo, branch)
+	if err != nil {
+		log.Printf("[error] GetZipball(%s): %v", branch, err)
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	filename := fmt.Sprintf("%s-%s.zip", s.cfg.Repo, branch)
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.Header().Set("Cache-Control", "no-store")
+	io.Copy(w, resp.Body) //nolint:errcheck
 }
 
 func (s *Server) handleSPA(w http.ResponseWriter, r *http.Request) {

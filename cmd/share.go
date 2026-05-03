@@ -16,13 +16,14 @@ import (
 )
 
 type shareFlags struct {
-	token  string
-	repo   string
-	branch string
-	port   int
-	expire time.Duration
-	tunnel string
-	audit  bool
+	token         string
+	repo          string
+	branch        string
+	port          int
+	expire        time.Duration
+	tunnel        string
+	audit         bool
+	allowDownload bool
 }
 
 func RunShareSession(ctx context.Context, f shareFlags) error {
@@ -80,15 +81,16 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 	}
 
 	cfg := server.Config{
-		Owner:    owner,
-		Repo:     repo,
-		Branch:   branch,
-		RepoInfo: repoInfo,
-		Branches: branches,
-		GitHub:   gh,
-		Sessions: sessions,
-		Port:     f.port,
-		AuditLog: auditLog,
+		Owner:         owner,
+		Repo:          repo,
+		Branch:        branch,
+		RepoInfo:      repoInfo,
+		Branches:      branches,
+		GitHub:        gh,
+		Sessions:      sessions,
+		Port:          f.port,
+		AuditLog:      auditLog,
+		AllowDownload: f.allowDownload,
 	}
 	serverErr := startServer(ctx, cfg)
 

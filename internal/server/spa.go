@@ -88,6 +88,8 @@ var spaHTML = `<!DOCTYPE html>
 
   #commits-btn { background: var(--bg-hover); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius); padding: 4px 10px; font-size: 12px; cursor: pointer; }
   #commits-btn:hover { background: var(--bg-active); }
+  #download-btn { background: var(--bg-hover); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius); padding: 4px 10px; font-size: 12px; cursor: pointer; text-decoration: none; }
+  #download-btn:hover { background: var(--bg-active); }
   #commits-overlay { display: none; position: fixed; inset: 0; background: #000a; z-index: 100; align-items: center; justify-content: center; }
   #commits-overlay.show { display: flex; }
   #commits-modal { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; width: 640px; max-width: 95vw; max-height: 80vh; display: flex; flex-direction: column; }
@@ -103,6 +105,7 @@ var spaHTML = `<!DOCTYPE html>
   @media (max-width: 640px) { :root { --tree-w: 220px; } }
 </style>
 <script>/*__RELAY_TOKEN__*/</script>
+<script>/*__ALLOW_DOWNLOAD__*/</script>
 </head>
 <body>
 <div id="app">
@@ -115,6 +118,7 @@ var spaHTML = `<!DOCTYPE html>
     <span class="ro-badge">read-only</span>
     <select id="branch-select" style="display:none"></select>
     <button id="commits-btn" style="display:none">⏱ History</button>
+    <a id="download-btn" style="display:none">Download ZIP</a>
     <span class="badge" id="hdr-badge"></span>
   </header>
   <div id="workspace">
@@ -211,6 +215,29 @@ async function boot() {
 
   $('commits-btn').style.display = '';
   $('commits-btn').addEventListener('click', openCommits);
+
+  if (typeof __ALLOW_DOWNLOAD__ !== 'undefined' && __ALLOW_DOWNLOAD__) {
+    var dlBtn = $('download-btn');
+    dlBtn.style.display = '';
+    dlBtn.addEventListener('click', async function(e) {
+      e.preventDefault();
+      dlBtn.textContent = 'Downloading…';
+      try {
+        var branch = sel.value || state.info.branch;
+        var resp = await api('/api/download?branch=' + encodeURIComponent(branch));
+        var blob = await resp.blob();
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = state.info.repo + '-' + branch + '.zip';
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch(err) {
+        alert('Download failed: ' + err.message);
+      }
+      dlBtn.textContent = 'Download ZIP';
+    });
+  }
 
   loadTree(state.info.branch);
 }
