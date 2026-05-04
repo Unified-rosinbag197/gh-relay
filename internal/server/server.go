@@ -165,24 +165,20 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if branch == s.cfg.Branch && s.cfg.Tree != nil {
-		writeJSON(w, s.cfg.Tree)
-		return
-	}
-
-	tree, err := s.cfg.GitHub.GetTree(r.Context(), s.cfg.Owner, s.cfg.Repo, branch)
+	tree, err := s.treeForBranch(r.Context(), branch)
 	if err != nil {
 		log.Printf("[error] GetTree(%s): %v", branch, err)
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	writeJSON(w, tree)
+	writeJSON(w, s.filteredTree(tree))
 }
 
-// Query params: ?sha=<blob_sha>&path=<file_path>
+// Query params: ?sha=<blob_sha>&path=<file_path>&branch=<branch>
 func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 	sha := r.URL.Query().Get("sha")
 	path := r.URL.Query().Get("path")
+	branch := r.URL.Query().Get("branch")
 
 	if sha == "" {
 		http.Error(w, "missing sha parameter", http.StatusBadRequest)
@@ -191,6 +187,35 @@ func (s *Server) handleBlob(w http.ResponseWriter, r *http.Request) {
 	if !isSafeSHA(sha) {
 		http.Error(w, "invalid sha parameter", http.StatusBadRequest)
 		return
+	}
+	if s.pathFilterEnabled() {
+		if path == "" {
+			http.Error(w, "missing path parameter", http.StatusBadRequest)
+			return
+		}
+		if branch == "" {
+			http.Error(w, "missing branch parameter", http.StatusBadRequest)
+			return
+		}
+		if !isSafeBranchName(branch) {
+			http.Error(w, "invalid branch name", http.StatusBadRequest)
+			return
+		}
+		if !s.cfg.PathFilter.AllowPath(path) {
+			http.NotFound(w, r)
+			return
+		}
+
+		tree, err := s.treeForBranch(r.Context(), branch)
+		if err != nil {
+			log.Printf("[error] GetTree(%s): %v", branch, err)
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		if !treeHasBlob(tree, path, sha) {
+			http.NotFound(w, r)
+			return
+		}
 	}
 
 	data, err := s.cfg.GitHub.GetBlob(r.Context(), s.cfg.Owner, s.cfg.Repo, sha)

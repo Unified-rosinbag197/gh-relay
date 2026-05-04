@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.ibm.com/soub4i/gh-relay/internal/filter"
 	"github.ibm.com/soub4i/gh-relay/internal/github"
 	"github.ibm.com/soub4i/gh-relay/internal/logo"
 	"github.ibm.com/soub4i/gh-relay/internal/secretscan"
@@ -24,6 +25,8 @@ type shareFlags struct {
 	port   int
 	expire time.Duration
 	tunnel string
+	allow  string
+	deny   string
 
 	scanSecrets   bool
 	scanContent   bool
@@ -32,8 +35,17 @@ type shareFlags struct {
 	allowDownload bool
 }
 
+type secretScanGitHub interface {
+	GetTree(ctx context.Context, owner, repo, ref string) (*github.Tree, error)
+	GetBlob(ctx context.Context, owner, repo, sha string) ([]byte, error)
+}
+
 func RunShareSession(ctx context.Context, f shareFlags) error {
 	logger := log.New(os.Stderr, "", 0)
+	pathPolicy, err := filter.NewPolicy(f.allow, f.deny)
+	if err != nil {
+		return err
+	}
 
 	printBanner(logger)
 
@@ -75,7 +87,7 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 		return fmt.Errorf("branch %q not found in %s/%s", branch, owner, repo)
 	}
 
-	initialTree, err := runSecretPreflight(ctx, logger, gh, owner, repo, branch, f)
+	initialTree, err := runSecretPreflight(ctx, logger, gh, owner, repo, branch, f, pathPolicy)
 	if err != nil {
 		return err
 	}
@@ -103,6 +115,7 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 		Tree:          initialTree,
 		AuditLog:      auditLog,
 		AllowDownload: f.allowDownload,
+    PathFilter: pathPolicy,
 	}
 	serverErr := startServer(ctx, cfg)
 
@@ -114,7 +127,7 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 	defer tun.Close()
 	logger.Printf("Tunnel active")
 
-	printShareInfo(logger, f, owner, repo, branch, repoInfo, tun.URL())
+	printShareInfo(logger, f, owner, repo, branch, repoInfo, pathPolicy, tun.URL())
 
 	select {
 	case <-ctx.Done():
@@ -130,7 +143,7 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 	return nil
 }
 
-func runSecretPreflight(ctx context.Context, logger *log.Logger, gh *github.Client, owner, repo, branch string, f shareFlags) (*github.Tree, error) {
+func runSecretPreflight(ctx context.Context, logger *log.Logger, gh secretScanGitHub, owner, repo, branch string, f shareFlags, pathPolicy *filter.Policy) (*github.Tree, error) {
 	if !f.scanSecrets {
 		return nil, nil
 	}
@@ -143,13 +156,14 @@ func runSecretPreflight(ctx context.Context, logger *log.Logger, gh *github.Clie
 	if tree.Truncated {
 		logger.Print("  GitHub returned a truncated tree; the secret-risk scan may be incomplete.")
 	}
+	scanTree := filter.FilterTree(tree, pathPolicy)
 
 	scanner := secretscan.New(secretscan.Options{ScanContent: f.scanContent})
-	findings := scanner.ScanEntries(secretScanEntries(tree.Tree))
+	findings := scanner.ScanEntries(secretScanEntries(scanTree.Tree))
 
 	if f.scanContent {
 		logger.Print("  Scanning small text blobs for secret patterns…")
-		contentFindings, skipped, err := scanSecretContent(ctx, scanner, gh, owner, repo, tree)
+		contentFindings, skipped, err := scanSecretContent(ctx, scanner, gh, owner, repo, scanTree)
 		if err != nil {
 			return tree, err
 		}
@@ -183,7 +197,7 @@ func secretScanEntries(entries []github.TreeEntry) []secretscan.Entry {
 	return out
 }
 
-func scanSecretContent(ctx context.Context, scanner *secretscan.Scanner, gh *github.Client, owner, repo string, tree *github.Tree) ([]secretscan.Finding, int, error) {
+func scanSecretContent(ctx context.Context, scanner *secretscan.Scanner, gh secretScanGitHub, owner, repo string, tree *github.Tree) ([]secretscan.Finding, int, error) {
 	var findings []secretscan.Finding
 	skipped := 0
 
@@ -268,7 +282,7 @@ func printBanner(l *log.Logger) {
 	l.Println(strings.Repeat("-", 54))
 }
 
-func printShareInfo(l *log.Logger, f shareFlags, owner, repo, branch string, info *github.RepoInfo, url string) {
+func printShareInfo(l *log.Logger, f shareFlags, owner, repo, branch string, info *github.RepoInfo, pathPolicy *filter.Policy, url string) {
 	l.Println()
 	l.Println(strings.Repeat("-", 54))
 	l.Println("  SESSION ACTIVE")
@@ -278,6 +292,16 @@ func printShareInfo(l *log.Logger, f shareFlags, owner, repo, branch string, inf
 	l.Printf("  Visibility : %s", visibilityLabel(info.Private))
 	if info.Description != "" {
 		l.Printf("  Description: %s", info.Description)
+	}
+	if pathPolicy != nil && pathPolicy.Enabled() {
+		l.Println()
+		l.Println("  Path filters:")
+		if len(pathPolicy.Allow) > 0 {
+			l.Printf("    Allow: %s", strings.Join(pathPolicy.Allow, ", "))
+		}
+		if len(pathPolicy.Deny) > 0 {
+			l.Printf("    Deny : %s", strings.Join(pathPolicy.Deny, ", "))
+		}
 	}
 	l.Println()
 	l.Printf("  Share this URL with your guest:")
