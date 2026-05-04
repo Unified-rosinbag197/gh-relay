@@ -350,7 +350,8 @@ async function openFile(entry) {
   $('vhdr-size').textContent = formatBytes(entry.size || 0);
 
   try {
-    var resp = await api('/api/blob?sha=' + encodeURIComponent(entry.sha) + '&path=' + encodeURIComponent(entry.path));
+    var branch = $('branch-select').value || state.info.branch;
+    var resp = await api('/api/blob?branch=' + encodeURIComponent(branch) + '&sha=' + encodeURIComponent(entry.sha) + '&path=' + encodeURIComponent(entry.path));
     var ct = resp.headers.get('Content-Type') || '';
 
     var nameParts = entry.path.split('/').pop().split('.');
