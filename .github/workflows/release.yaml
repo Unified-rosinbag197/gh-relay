@@ -4,19 +4,23 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   test:
-    name: Test
+    name: Test (Go ${{ matrix.go-version }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ["1.22", "1.23"]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.22"
+          go-version: ${{ matrix.go-version }}
           cache: true
       - run: go vet ./...
       - run: go test -race ./...
@@ -57,8 +61,9 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
         run: |
+          VERSION=$(echo "${{ github.ref_name }}" | sed 's/^v//')
           go build \
-            -ldflags="-s -w -X github.com/soub4i/gh-relay/internal/version.Version=${{ github.ref_name }}" \
+            -ldflags="-s -w -X github.com/soub4i/gh-relay/internal/version.Version=${VERSION}" \
             -o ${{ steps.bin.outputs.name }} \
             .
 
