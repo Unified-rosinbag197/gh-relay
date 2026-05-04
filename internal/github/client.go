@@ -113,6 +113,29 @@ func (c *Client) GetBlob(ctx context.Context, owner, repo, sha string) ([]byte, 
 	return data, nil
 }
 
+func (c *Client) GetZipball(ctx context.Context, owner, repo, ref string) (*http.Response, error) {
+	url := fmt.Sprintf("%s/repos/%s/%s/zipball/%s", githubAPIBase, owner, repo, ref)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating zipball request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("User-Agent", "gh-relay/1.0")
+
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetching zipball: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("fetching zipball failed with status: %d", resp.StatusCode)
+	}
+
+	return resp, nil
+}
+
 func (c *Client) GetCommits(ctx context.Context, owner, repo, branch string) ([]CommitInfo, error) {
 	resp, err := c.get(ctx, fmt.Sprintf("/repos/%s/%s/commits?sha=%s&per_page=20", owner, repo, branch))
 	if err != nil {

@@ -17,16 +17,17 @@ type gitHubAPI interface {
 
 // Config holds everything the server needs to operate.
 type Config struct {
-	Owner      string
-	Repo       string
-	Branch     string
-	RepoInfo   *github.RepoInfo
-	Branches   []string
-	GitHub     gitHubAPI
-	Sessions   *session.Manager
-	Port       int
-	Tree       *github.Tree
-	AuditLog   *AuditLog
+	Owner         string
+	Repo          string
+	Branch        string
+	RepoInfo      *github.RepoInfo
+	Branches      []string
+	GitHub        *github.Client
+	Sessions      *session.Manager
+	Port          int
+	Tree          *github.Tree
+	AuditLog      *AuditLog
+	AllowDownload bool
 	PathFilter *filter.Policy
 }
 

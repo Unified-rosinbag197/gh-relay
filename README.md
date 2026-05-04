@@ -246,6 +246,17 @@ Logs guest activity to the terminal and prints a summary on exit:
   Duration      : 4m32s
 ```
 
+### Allow guests to download as ZIP
+
+```bash
+gh-relay share \
+  --token ghp_... \
+  --repo my-org/private-app \
+  --allow-download
+```
+
+A "Download ZIP" button appears in the guest's browser. The ZIP is streamed directly from GitHub through the proxy — nothing is written to disk. Off by default since a downloaded ZIP gives the guest a permanent copy.
+
 ### All flags
 
 | Flag | Default | Description |
@@ -263,6 +274,7 @@ Logs guest activity to the terminal and prints a summary on exit:
 | `--scan-content` | `false` | Also scan small text blobs for common secret patterns |
 | `--fail-on-secrets` | `false` | Exit non-zero if the pre-share scan finds potential secrets |
 | `--audit` | `false` | Log guest activity and print a session summary on exit |
+| `--allow-download` | `false` | Allow guests to download the repository as a ZIP archive |
 
 ---
 

@@ -32,6 +32,7 @@ type shareFlags struct {
 	scanContent   bool
 	failOnSecrets bool
 	audit         bool
+	allowDownload bool
 }
 
 type secretScanGitHub interface {
@@ -103,17 +104,18 @@ func RunShareSession(ctx context.Context, f shareFlags) error {
 	}
 
 	cfg := server.Config{
-		Owner:      owner,
-		Repo:       repo,
-		Branch:     branch,
-		RepoInfo:   repoInfo,
-		Branches:   branches,
-		GitHub:     gh,
-		Sessions:   sessions,
-		Port:       f.port,
-		Tree:       initialTree,
-		AuditLog:   auditLog,
-		PathFilter: pathPolicy,
+		Owner:         owner,
+		Repo:          repo,
+		Branch:        branch,
+		RepoInfo:      repoInfo,
+		Branches:      branches,
+		GitHub:        gh,
+		Sessions:      sessions,
+		Port:          f.port,
+		Tree:          initialTree,
+		AuditLog:      auditLog,
+		AllowDownload: f.allowDownload,
+    PathFilter: pathPolicy,
 	}
 	serverErr := startServer(ctx, cfg)
 
