@@ -13,6 +13,7 @@ type gitHubAPI interface {
 	GetTree(ctx context.Context, owner, repo, ref string) (*github.Tree, error)
 	GetBlob(ctx context.Context, owner, repo, sha string) ([]byte, error)
 	GetCommits(ctx context.Context, owner, repo, branch string) ([]github.CommitInfo, error)
+	GetZipball(ctx context.Context, owner, repo, ref string) (*http.Response, error)
 }
 
 // Config holds everything the server needs to operate.
@@ -22,7 +23,7 @@ type Config struct {
 	Branch        string
 	RepoInfo      *github.RepoInfo
 	Branches      []string
-	GitHub        *github.Client
+	GitHub        gitHubAPI
 	Sessions      *session.Manager
 	Port          int
 	Tree          *github.Tree

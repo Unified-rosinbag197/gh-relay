@@ -2,6 +2,7 @@
 
 > Share a private GitHub repo with anyone, no collaborator invite, no paid seat, no cleanup.
 
+[![CI](https://github.com/soub4i/gh-relay/actions/workflows/ci.yaml/badge.svg)](https://github.com/soub4i/gh-relay/actions/workflows/ci.yaml)
 [![Release](https://github.com/soub4i/gh-relay/actions/workflows/release.yaml/badge.svg)](https://github.com/soub4i/gh-relay/actions/workflows/release.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/soub4i/gh-relay)](https://goreportcard.com/report/github.com/soub4i/gh-relay)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)

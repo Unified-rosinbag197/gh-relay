@@ -225,3 +225,7 @@ func (f *fakeGitHub) GetBlob(_ context.Context, _, _, sha string) ([]byte, error
 func (f *fakeGitHub) GetCommits(_ context.Context, _, _, _ string) ([]github.CommitInfo, error) {
 	return nil, nil
 }
+
+func (f *fakeGitHub) GetZipball(_ context.Context, _, _, _ string) (*http.Response, error) {
+	return nil, nil
+}
